@@ -1,34 +1,12 @@
-\# HexDig
+# HexDig
 
 
 
-🔍 \*\*HexDig\*\* is a fast, extensible tool for scanning, inspecting, and extracting embedded data from binary files and firmware images.
+🔍 **HexDig** is a fast, extensible tool for scanning, inspecting, and extracting embedded data from binary files and firmware images.
 
 
 
-Inspired by tools like \*\*binwalk\*\*, HexDig focuses on modern workflows, clear output, and hackable internals—making it ideal for reverse engineers, firmware analysts, and security researchers.
-
-
-
----
-
-
-
-\## ✨ Features
-
-
-
-\- 🧠 Scan binary files for embedded file signatures
-
-\- 🧩 Identify compressed data, file systems, and common firmware formats
-
-\- 📦 Extract discovered data automatically or selectively
-
-\- 🧪 Analyze raw binaries and hex-level structures
-
-\- ⚡ Fast scanning with minimal dependencies
-
-\- 🔌 Plugin-friendly architecture (WIP)
+Inspired by tools like **binwalk**, HexDig focuses on modern workflows, clear output, and hackable internals—making it ideal for reverse engineers, firmware analysts, and security researchers.
 
 
 
@@ -36,11 +14,33 @@ Inspired by tools like \*\*binwalk\*\*, HexDig focuses on modern workflows, clea
 
 
 
-\## 🚀 Installation
+## ✨ Features
 
 
 
-\### From source
+- 🧠 Scan binary files for embedded file signatures
+
+- 🧩 Identify compressed data, file systems, and common firmware formats
+
+- 📦 Extract discovered data automatically or selectively
+
+- 🧪 Analyze raw binaries and hex-level structures
+
+- ⚡ Fast scanning with minimal dependencies
+
+- 🔌 Plugin-friendly architecture (WIP)
+
+
+
+---
+
+
+
+## 🚀 Installation
+
+
+
+### From source
 
 ```bash
 
@@ -72,11 +72,11 @@ sudo make install
 
 
 
-\## 🛠 Usage
+## 🛠 Usage
 
 
 
-\### Basic scan
+### Basic scan
 
 ```bash
 
@@ -86,7 +86,7 @@ hexdig firmware.bin
 
 
 
-\### Scan with extraction
+### Scan with extraction
 
 ```bash
 
@@ -95,7 +95,7 @@ hexdig -e firmware.bin
 ```
 
 
-\### Show detailed output
+### Show detailed output
 
 ```bash
 
@@ -109,7 +109,7 @@ hexdig -v firmware.bin
 
 
 
-\## 📄 Example Output
+## 📄 Example Output
 
 
 
@@ -136,17 +136,17 @@ hexdig -v firmware.bin
 
 
 
-\## 🔧 Configuration
+## 🔧 Configuration
 
 
 
 HexDig supports configuration via:
 
-\- Command-line flags
+- Command-line flags
 
-\- Environment variables (planned)
+- Environment variables (planned)
 
-\- Config file support (planned)
+- Config file support (planned)
 
 
 
@@ -158,21 +158,21 @@ Run `hexdig --help` for all available options.
 
 
 
-\## 🧩 Supported Formats (Partial)
+## 🧩 Supported Formats (Partial)
 
 
 
-\- ELF
+- ELF
 
-\- gzip / zlib
+- gzip / zlib
 
-\- SquashFS
+- SquashFS
 
-\- CPIO
+- CPIO
 
-\- TAR
+- TAR
 
-\- Raw filesystem images
+- Raw filesystem images
 
 
 
@@ -184,11 +184,11 @@ Run `hexdig --help` for all available options.
 
 
 
-\## 🧪 Development Status
+## 🧪 Development Status
 
 
 
-⚠️ \*\*HexDig is under active development.\*\*  
+⚠️ **HexDig is under active development.**  
 
 APIs, output formats, and features may change.
 
@@ -202,7 +202,7 @@ Contributions, feedback, and testing are very welcome.
 
 
 
-\## 🤝 Contributing
+## 🤝 Contributing
 
 
 
@@ -222,25 +222,11 @@ Contributions are encouraged!
 
 Please include:
 
-\- Clear commit messages
+- Clear commit messages
 
-\- Tests when applicable
+- Tests when applicable
 
-\- Documentation updates for new features
-
-
-
----
-
-
-
-\## 📜 License
-
-
-
-HexDig is released under the \*\*GPL-3.0 License\*\*.  
-
-See the \[LICENSE](LICENSE) file for details.
+- Documentation updates for new features
 
 
 
@@ -248,13 +234,13 @@ See the \[LICENSE](LICENSE) file for details.
 
 
 
-\## 🙏 Acknowledgements
+## 📜 License
 
 
 
-\- Inspired by \*\*binwalk\*\*
+HexDig is released under the **GPL-3.0 License**.  
 
-\- Thanks to the firmware reverse-engineering and open-source security communities
+See the [LICENSE](LICENSE) file for details.
 
 
 
@@ -262,7 +248,21 @@ See the \[LICENSE](LICENSE) file for details.
 
 
 
-\## 📫 Contact
+## 🙏 Acknowledgements
+
+
+
+- Inspired by **binwalk**
+
+- Thanks to the firmware reverse-engineering and open-source security communities
+
+
+
+---
+
+
+
+## 📫 Contact
 
 
 
