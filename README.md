@@ -158,22 +158,37 @@ Run `hexdig --help` for all available options.
 
 
 
-## 🧩 Supported Formats (Partial)
+## 🧩 Supported Parsers
 
 
-
-- ELF
-
-- gzip / zlib
-
-- SquashFS
-
+- AES
+- ARJ
+- BMP
+- BZIP2
+- CAB
 - CPIO
-
+- CRAMFS
+- CRC
+- DTB
+- ELF
+- FAT
+- GIF
+- GZIP
+- JPG
+- Linux
+- LZMA
+- MBR
+- PDF
+- PE
+- PNG
+- RAR
+- ROMFS
+- 7Z
+- SquashFS
 - TAR
-
-- Raw filesystem images
-
+- UImage
+- XZ
+- ZIP
 
 
 > More formats are continuously being added.
