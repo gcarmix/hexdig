@@ -55,11 +55,16 @@ Config parseArgs(int argc, char* argv[]) {
         } else if (arg == "-v") {
             Logger::debug("Enabling verbose Output");
             config.verbose = true;
-        } else if (arg == "-h" || arg == "--help") {
+        } else if (arg == "-d") {
+            Logger::info("Enabling Debug Mode");
+            Logger::setLevel(LogLevel::DEBUG);
+        }
+         else if (arg == "-h" || arg == "--help") {
             std::cout << "Usage: scanner [-e] [-r N or -rN] [-j [file]] <input_file>\n"
                       << "  -e         Enable extraction\n"
                       << "  -r N       Enable recursive scan with depth N (default 1)\n"
                       << "  -j [file]  Output in JSON format, optionally to given file\n"
+                      << "  -d         Enable Debug mode\n"
                       << "  -v         Verbose output\n"
                       << "  -h         Show this help message\n";
             std::exit(0);
@@ -78,12 +83,12 @@ Config parseArgs(int argc, char* argv[]) {
 }
 
 int main(int argc, char* argv[]) {
-    Logger::setLevel(LogLevel::DEBUG);
+    Logger::setLevel(LogLevel::INFO);
     Logger::info("HexDig v0.1");
     Config config = parseArgs(argc, argv);
 
     Scanner scanner(config.extract, config.recurseDepth,0,fs::path("extractions/"),config.verbose);
-    Logger::debug("Opening " + config.inputFile + "...");
+    Logger::info("Opening " + config.inputFile + "...");
     
     auto start = std::chrono::high_resolution_clock::now();
     auto results = scanner.scan(fs::path(config.inputFile));

@@ -2,6 +2,7 @@
 #include "parser_registry.hpp"
 #include "extractor_registry.hpp"
 #include <iostream>
+#include <algorithm>
 #include <fstream>
 #include "logger.hpp"
 #include "printer.hpp"

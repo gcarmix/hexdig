@@ -5,10 +5,7 @@
 #include <iomanip>
 #include <cstring>
 #include "helpers.hpp"
-//#define USE_LIBLZMA
-#ifdef USE_LIBLZMA
-#include <lzma.h>
-#endif
+#include "logger.hpp"
 
 // Common LZMA properties and dictionary sizes (like binwalk)
 static const uint8_t supported_props[] = {0x5D, 0x6E, 0x6D, 0x6C};
@@ -59,8 +56,7 @@ public:
         ScanResult res;
         res.offset = offset;
         res.type = "LZMA";
-        res.extractorType =res.type;
-        
+        res.extractorType ="7Z";
 
         if (offset + 13 > blob.size()) {
             res.info = "Invalid header";
@@ -81,60 +77,20 @@ public:
 
         res.info = info.str();
         res.length = blob.size() - offset; // compressed length (best guess)
+        res.isValid = true;
         if(h.uncompressedSize > MAX_ANALYZED_FILE_SIZE)
         {
-            res.isValid = false;
+            if (h.uncompressedSize != 0xFFFF'FFFF'FFFF'FFFFull)
+            {
+                res.isValid = false;
+            }
+            
         }
-#ifdef USE_LIBLZMA
-        // Dry-run validation
-        std::vector<uint8_t> out;
-        if (extract(blob, offset, out)) {
-            res.length = blob.size() - offset;
-            info << ", decompression OK, output=" << out.size() << " bytes";
-            res.info = info.str();
-            res.isValid = true;
-        } else {
-            res.isValid = false;
-            res.info += ", decompression failed";
-        }
-#endif
+
         
         return res;
     }
 
-#ifdef USE_LIBLZMA
-    bool extract(const std::vector<uint8_t>& blob, size_t offset,
-                 std::vector<uint8_t>& out) {
-        if (offset + 13 > blob.size()) return false;
-
-        const uint8_t* comp = &blob[offset];
-        size_t comp_len = blob.size() - offset;
-
-        lzma_stream strm = LZMA_STREAM_INIT;
-        lzma_ret ret = lzma_alone_decoder(&strm, UINT64_MAX);
-        if (ret != LZMA_OK) return false;
-
-        strm.next_in = comp;
-        strm.avail_in = comp_len;
-
-        std::vector<uint8_t> buf(1 << 16);
-        while (true) {
-            strm.next_out = buf.data();
-            strm.avail_out = buf.size();
-            ret = lzma_code(&strm, LZMA_FINISH);
-            if (ret != LZMA_OK && ret != LZMA_STREAM_END && ret != LZMA_BUF_ERROR) {
-                lzma_end(&strm);
-                return false;
-            }
-            size_t produced = buf.size() - strm.avail_out;
-            out.insert(out.end(), buf.data(), buf.data() + produced);
-            if (ret == LZMA_STREAM_END) break;
-            if (ret == LZMA_BUF_ERROR && strm.avail_in == 0) break;
-        }
-        lzma_end(&strm);
-        return true;
-    }
-#endif
 };
 
 REGISTER_PARSER(LZMAParser)

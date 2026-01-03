@@ -6,6 +6,7 @@
 #include <sstream>
 #include <vector>
 #include <string>
+#include <algorithm>
 #include <cstring>
 #include "logger.hpp"
 #include "helpers.hpp"
