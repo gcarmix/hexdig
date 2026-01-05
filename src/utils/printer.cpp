@@ -1,7 +1,7 @@
 #include<iostream>
 #include "printer.hpp"
 #include "helpers.hpp"
-#include <cjson/cJSON.h>
+#include "cJSON.h"
 #include <iomanip>
 #include <sstream>
 #include <string>

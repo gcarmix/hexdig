@@ -35,7 +35,11 @@ bool SquashFSParser::match(const std::vector<uint8_t>& blob, size_t offset) {
 ScanResult SquashFSParser::parse(const std::vector<uint8_t>& blob, size_t offset) {
     ScanResult result;
     result.type   = "SquashFS";
+    #ifdef _WIN32
+    result.extractorType = "7Z";
+    #else
     result.extractorType = result.type;
+    #endif
     result.isValid = false;
     if (offset + 96 > blob.size()) {
         return result;

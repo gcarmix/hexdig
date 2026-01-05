@@ -24,6 +24,10 @@ public:
 
         std::string cmd = "sasquatch -d " + extractionPath.string() + " " + imagePath + " > /dev/null 2>&1";
         int result = std::system(cmd.c_str());
+        if(result != 0)
+        {
+            Logger::error("can't run sasquatch, if you are on UNIX systems verify that the software is installed (feature not available on Windows systems)");
+        }
         fs::remove(imagePath);
         /*if (result != 0) {
             std::cerr << "[SquashFSExtractor] sasquatch failed at offset " << offset << "\n";

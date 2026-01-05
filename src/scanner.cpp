@@ -32,7 +32,7 @@ std::vector<ScanResult> Scanner::scan(fs::path filePath) {
     std::ifstream file(filePath, std::ios::binary);
     if (!file) {
         Logger::error("Error: Cannot open file " + filePath.string());
-        exit(-1);
+        return results;
     }
 
     std::vector<uint8_t> blob((std::istreambuf_iterator<char>(file)),
