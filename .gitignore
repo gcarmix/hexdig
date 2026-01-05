@@ -1,5 +1,5 @@
-cJSON/
 inputs/
 signatures/
 build/
 build_win/
+ext/

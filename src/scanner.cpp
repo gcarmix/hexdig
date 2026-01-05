@@ -29,6 +29,11 @@ Scanner::Scanner(bool enableExtraction, int recursionDepth, int currentDepth,fs:
 
 std::vector<ScanResult> Scanner::scan(fs::path filePath) {
     Logger::debug("Scanner::scan " + filePath.string()+"("+std::to_string(currentDepth)+")");
+    if(!std::filesystem::is_regular_file(filePath))
+    {
+        Logger::error("Error, not a regular file");
+        return results;
+    }
     std::ifstream file(filePath, std::ios::binary);
     if (!file) {
         Logger::error("Error: Cannot open file " + filePath.string());

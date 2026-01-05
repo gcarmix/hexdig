@@ -11,9 +11,24 @@
 #include <filesystem>
 
 namespace fs = std::filesystem;
+
+// ANSI color codes
+namespace ansi {
+    const std::string reset   = "\033[0m";
+    const std::string bold    = "\033[1m";
+    const std::string cyan    = "\033[36m";
+    const std::string yellow  = "\033[33m";
+    const std::string green   = "\033[32m";
+    const std::string magenta = "\033[35m";
+    const std::string gray    = "\033[90m";
+}
+
+
+
+
 cJSON* build_json_result(const ScanResult& r) {
     cJSON* item = cJSON_CreateObject();
-    cJSON_AddStringToObject(item, "offset", to_hex(r.offset).c_str());
+    cJSON_AddNumberToObject(item, "offset", static_cast<double>(r.offset));
     cJSON_AddStringToObject(item, "type", r.type.c_str());
     cJSON_AddNumberToObject(item, "size", static_cast<double>(r.length));
     cJSON_AddStringToObject(item, "source", r.source.c_str());
@@ -52,7 +67,7 @@ void dumpJson(const std::vector<ScanResult>& results,std::string filename) {
 }
 
 void printResult(const ScanResult& result, int depth) {
-    std::cout<<"+-";
+    std::cout << "+-";
     for (int i=0;i<depth;i++) std::cout<<"-";
     //std::string indent(depth * 2, '\t');
     std::cout << "0x" << std::hex << result.offset
@@ -64,18 +79,6 @@ void printResult(const ScanResult& result, int depth) {
         printResult(child, depth + 1);
     }*/
 }
-
-// ANSI color codes
-namespace ansi {
-    const std::string reset   = "\033[0m";
-    const std::string bold    = "\033[1m";
-    const std::string cyan    = "\033[36m";
-    const std::string yellow  = "\033[33m";
-    const std::string green   = "\033[32m";
-    const std::string magenta = "\033[35m";
-    const std::string gray    = "\033[90m";
-}
-
 
 
 
@@ -132,7 +135,7 @@ static void printScanResult(const ScanResult& sr, const std::string& prefix = ""
 
 // Entry point: print a vector of ScanResult
 void printScanResults(const std::vector<ScanResult>& results,std::string inputFile) {
-    std::cout<<"* "<<inputFile<<std::endl;
+    std::cout<< ansi::reset <<"* "<<inputFile<<std::endl;
     for (size_t i = 0; i < results.size(); ++i) {
         printScanResult(results[i], "", i == results.size() - 1);
     }
