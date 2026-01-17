@@ -12,4 +12,8 @@ public:
     virtual ~BaseExtractor() = default;
     virtual std::string name() const = 0;
     virtual void extract(const std::vector<std::uint8_t>& blob, size_t offset,fs::path extractionPath) = 0;
+    virtual void extract(const std::vector<std::uint8_t>& blob, size_t offset,fs::path extractionPath,const std::string& extension)
+    {
+        extract(blob,offset,extractionPath);
+    }
 };

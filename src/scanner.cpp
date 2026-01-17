@@ -7,6 +7,7 @@
 #include "logger.hpp"
 #include "printer.hpp"
 #include "helpers.hpp"
+#include <chrono>
 
 Scanner::Scanner(bool enableExtraction, int recursionDepth, int currentDepth,fs::path extractionPath,bool verbose)
     : enableExtraction(enableExtraction),
@@ -47,8 +48,7 @@ std::vector<ScanResult> Scanner::scan(fs::path filePath) {
     //Logger::debug("BLOBNAME: "+blobName);
     //Logger::debug("EXTRPATH: "+extractionPath.string());
     extractionPath = extractionPath / fs::path(filePath.filename().string() + ".extracted");
-    
-
+    int total = 0;
     while (offset < blob.size()) {
         if (visitedOffsets.count(offset)) {
             ++offset;
@@ -60,9 +60,15 @@ std::vector<ScanResult> Scanner::scan(fs::path filePath) {
         for (const auto& parser : parsers) {
             if (parser->match(blob, offset)) {
                 Logger::debug(to_hex(offset) + " " + parser->name());
-
+                auto start =  std::chrono::high_resolution_clock::now();
+                
                 ScanResult result = parser->parse(blob, offset);
+                offset = result.offset;
                 result.source = filePath.string();
+                auto end =  std::chrono::high_resolution_clock::now();
+                int diff = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+                total += diff;
+                Logger::debug(std::to_string(diff));
 
                 bool extracted = false;
                 if(result.isValid)
@@ -75,7 +81,15 @@ std::vector<ScanResult> Scanner::scan(fs::path filePath) {
                             {
                                 Logger::debug("Using "+extractor->name()+" extractor with path: "+extractionPath.string());
                                 Logger::debug(to_hex(offset) + " " + filePath.filename().string());
-                                extractor->extract(blob, offset, extractionPath);
+                                if(extractor->name() == "RAW")
+                                {
+                                    extractor->extract(blob, offset, extractionPath,result.type);
+                                }
+                                else
+                                {
+                                    extractor->extract(blob, offset, extractionPath);
+                                }
+                                
                                 extracted = true;
 
                                 if(recursionDepth > 0)
@@ -128,6 +142,7 @@ std::vector<ScanResult> Scanner::scan(fs::path filePath) {
             ++offset;
         }
     }
+    Logger::debug("total: " + std::to_string(total));
 
     return results;
 }

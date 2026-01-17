@@ -4,71 +4,148 @@
 #include <cstring>
 #include <string>
 #include <vector>
-#include <tuple>
+#include <zlib.h>
 
 class PNGParser : public BaseParser {
 public:
     std::string name() const override { return "PNG"; }
     bool match(const std::vector<uint8_t>& blob, size_t offset) override;
     ScanResult parse(const std::vector<uint8_t>& blob, size_t offset) override;
-
-private:
-    bool extractIHDR(const std::vector<uint8_t>& blob, size_t offset, size_t& width, size_t& height);
-    size_t findIEND(const std::vector<uint8_t>& blob, size_t offset);
 };
 
 bool PNGParser::match(const std::vector<uint8_t>& blob, size_t offset) {
-    const uint8_t png_magic[8] = {0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'};
-    return offset + 8 <= blob.size() &&
-           std::memcmp(&blob[offset], png_magic, 8) == 0;
+    // Binwalk-style signature:
+    // PNG magic + IHDR length=13 + "IHDR"
+    static const uint8_t sig[] = {
+        0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A,
+        0x00, 0x00, 0x00, 0x0D, // IHDR length = 13
+        'I', 'H', 'D', 'R'
+    };
+
+    if (offset + sizeof(sig) > blob.size())
+        return false;
+
+    return std::memcmp(&blob[offset], sig, sizeof(sig)) == 0;
 }
 
 ScanResult PNGParser::parse(const std::vector<uint8_t>& blob, size_t offset) {
-    size_t width = 0, height = 0;
-    extractIHDR(blob, offset, width, height);
+    ScanResult r;
+    r.type = "PNG";
+    r.offset = offset;
+    r.extractorType = "RAW";
+    r.isValid = false;
+    r.length = 0;
 
-    size_t end = findIEND(blob, offset);
-    size_t length = end > offset ? end - offset : blob.size() - offset;
+    size_t pos = offset + 8; // skip PNG signature
 
-    std::ostringstream info;
-    info << "Resolution: " << width << "x" << height;
-    ScanResult result;
-     result.type = "PNG";
-        result.length = length;
-        result.offset = offset;
-        result.isValid = true;
-        result.info = info.str();
-        return result;
-}
-
-bool PNGParser::extractIHDR(const std::vector<uint8_t>& blob, size_t offset, size_t& width, size_t& height) {
-    size_t ihdr_offset = offset + 8;
-    if (ihdr_offset + 25 > blob.size()) return false;
-
-    // IHDR chunk starts with 4-byte length, then "IHDR"
-    if (std::memcmp(&blob[ihdr_offset + 4], "IHDR", 4) != 0) return false;
-
-    width = (blob[ihdr_offset + 8] << 24) |
-            (blob[ihdr_offset + 9] << 16) |
-            (blob[ihdr_offset + 10] << 8) |
-            blob[ihdr_offset + 11];
-
-    height = (blob[ihdr_offset + 12] << 24) |
-             (blob[ihdr_offset + 13] << 16) |
-             (blob[ihdr_offset + 14] << 8) |
-             blob[ihdr_offset + 15];
-
-    return true;
-}
-
-size_t PNGParser::findIEND(const std::vector<uint8_t>& blob, size_t offset) {
-    const char* iend_sig = "IEND";
-    for (size_t i = offset + 8; i + 7 < blob.size(); ++i) {
-        if (std::memcmp(&blob[i + 4], iend_sig, 4) == 0) {
-            return i + 12; // 4-byte length + 4-byte type + 4-byte CRC
-        }
+    // --- Parse IHDR ---
+    if (pos + 8 + 13 + 4 > blob.size()) {
+        r.info = "Invalid PNG: truncated IHDR";
+        return r;
     }
-    return blob.size();
+
+    uint32_t ihdr_len =
+        (blob[pos] << 24) | (blob[pos+1] << 16) |
+        (blob[pos+2] << 8) | blob[pos+3];
+
+    if (ihdr_len != 13) {
+        r.info = "Invalid PNG: IHDR length != 13";
+        return r;
+    }
+
+    pos += 4; // skip length
+
+    const uint8_t* ihdr_type = &blob[pos];
+    if (std::memcmp(ihdr_type, "IHDR", 4) != 0) {
+        r.info = "Invalid PNG: missing IHDR";
+        return r;
+    }
+
+    pos += 4; // skip type
+
+    // Extract width/height
+    if (pos + 13 > blob.size()) {
+        r.info = "Invalid PNG: truncated IHDR data";
+        return r;
+    }
+
+    size_t width =
+        (blob[pos] << 24) | (blob[pos+1] << 16) |
+        (blob[pos+2] << 8) | blob[pos+3];
+
+    size_t height =
+        (blob[pos+4] << 24) | (blob[pos+5] << 16) |
+        (blob[pos+6] << 8) | blob[pos+7];
+
+    pos += ihdr_len; // skip IHDR data
+
+    // IHDR CRC
+    if (pos + 4 > blob.size()) {
+        r.info = "Invalid PNG: missing IHDR CRC";
+        return r;
+    }
+
+    uint32_t stored_crc =
+        (blob[pos] << 24) | (blob[pos+1] << 16) |
+        (blob[pos+2] << 8) | blob[pos+3];
+
+    uint32_t computed_crc = crc32(0L, Z_NULL, 0);
+    computed_crc = crc32(computed_crc, ihdr_type, 4 + ihdr_len);
+
+    if (stored_crc != computed_crc) {
+        r.info = "Invalid PNG: IHDR CRC mismatch";
+        return r;
+    }
+
+    pos += 4; // skip IHDR CRC
+
+    // --- Walk chunks ---
+    while (pos + 12 <= blob.size()) {
+        uint32_t len =
+            (blob[pos] << 24) | (blob[pos+1] << 16) |
+            (blob[pos+2] << 8) | blob[pos+3];
+
+        pos += 4;
+
+        const uint8_t* type = &blob[pos];
+        pos += 4;
+
+        if (pos + len + 4 > blob.size()) {
+            r.info = "Invalid PNG: chunk exceeds file bounds";
+            return r;
+        }
+
+        // CRC for this chunk
+        uint32_t stored =
+            (blob[pos + len] << 24) |
+            (blob[pos + len + 1] << 16) |
+            (blob[pos + len + 2] << 8) |
+            blob[pos + len + 3];
+
+        uint32_t crc = crc32(0L, Z_NULL, 0);
+        crc = crc32(crc, type, 4 + len);
+
+        if (crc != stored) {
+            r.info = "Invalid PNG: chunk CRC mismatch";
+            return r;
+        }
+
+        if (std::memcmp(type, "IEND", 4) == 0) {
+            pos += len + 4;
+            r.isValid = true;
+            r.length = pos - offset;
+
+            std::ostringstream info;
+            info << "Resolution: " << width << "x" << height;
+            r.info = info.str();
+            return r;
+        }
+
+        pos += len + 4; // skip data + CRC
+    }
+
+    r.info = "Invalid PNG: missing IEND";
+    return r;
 }
 
 REGISTER_PARSER(PNGParser)

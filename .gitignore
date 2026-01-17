@@ -2,4 +2,5 @@ inputs/
 signatures/
 build/
 build_win/
+build_win2/
 ext/

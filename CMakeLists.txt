@@ -23,7 +23,7 @@ elseif (WIN32)
     add_library(ZLIB::ZLIB STATIC IMPORTED)
     set_target_properties(ZLIB::ZLIB PROPERTIES IMPORTED_LOCATION "${ZLIB_LIBRARY}" INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDE_DIR}" )
 endif()
-add_compile_options("-O3")
+add_compile_options("-g3")
 include_directories(
     src
     src/parsers

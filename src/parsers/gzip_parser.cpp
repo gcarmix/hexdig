@@ -121,9 +121,18 @@ public:
             strm.avail_out = buffer.size();
 
             ret = inflate(&strm, Z_NO_FLUSH);
+
             if (ret == Z_STREAM_ERROR) {
                 inflateEnd(&strm);
-                r.info = "Invalid GZIP: inflate stream error";
+                r.info = "Invalid GZIP: Z_STREAM_ERROR";
+                r.length = blob.size() - offset;
+                return r;
+            }
+
+            if (ret == Z_DATA_ERROR || ret == Z_MEM_ERROR || ret == Z_BUF_ERROR) {
+                inflateEnd(&strm);
+                r.info = "Invalid GZIP: inflate failed (data/buf/mem error)";
+                r.length = blob.size() - offset;
                 return r;
             }
 
@@ -136,6 +145,7 @@ public:
         } while (ret != Z_STREAM_END);
 
         inflateEnd(&strm);
+
 
         bool crcMatch = (crc32Calc == crc32Trailer);
         bool sizeMatch = (isizeCalc == isizeTrailer);

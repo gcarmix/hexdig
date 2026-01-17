@@ -15,7 +15,7 @@ namespace fs = std::filesystem;
 struct Config {
     bool extract = false;
     int recurseDepth = 0;
-    int jsonOutput = 0;        // keep as flag if you want
+    bool jsonOutput = false;        // keep as flag if you want
     std::string jsonFile;      // new field
     bool verbose = false;
     std::string extractionPath = "extractions/";
@@ -144,7 +144,7 @@ Config parseArgs(int argc, char* argv[]) {
     if(args.has("jsonPath"))
     {
        config.jsonFile = args.get("jsonPath");
- 
+        config.jsonOutput = true;
      
         Logger::debug("Setting json output path to "+ config.jsonFile);
     }

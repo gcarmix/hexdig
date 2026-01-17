@@ -86,6 +86,10 @@ public:
             }
             
         }
+        else if(h.uncompressedSize == 0)
+        {
+            res.isValid = false;
+        }
 
         
         return res;
