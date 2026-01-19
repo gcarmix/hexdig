@@ -12,5 +12,6 @@ struct ScanResult {
     std::string source;  // NEW: e.g., "ZIP:images/logo.jpg"
     std::vector<ScanResult> children;  // 🧠 Nested scan results
     bool confident = true;
+    bool extracted = false;
     bool isValid = false;
 };

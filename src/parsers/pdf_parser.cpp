@@ -34,6 +34,7 @@ ScanResult PDFParser::parse(const std::vector<uint8_t>& blob, size_t offset) {
     ScanResult result;
     result.offset = offset;
     result.type = "PDF";
+    result.extractorType = "RAW";
     result.length = length;
     result.isValid = true;
     result.info = info.str();
@@ -50,15 +51,36 @@ std::string PDFParser::extractVersion(const std::vector<uint8_t>& blob, size_t o
 
 size_t PDFParser::findLastEOF(const std::vector<uint8_t>& blob, size_t offset) {
     const char* eof_marker = "%%EOF";
+    const char* pdf_marker = "%PDF-";
+
     size_t last_eof = offset;
 
-    for (size_t i = offset; i + 5 < blob.size(); ++i) {
+    for (size_t i = offset + 5; i + 5 < blob.size(); ++i) {
+
+        // Stop if we hit the next PDF header
+        if (std::memcmp(&blob[i], pdf_marker, 5) == 0) {
+            break;
+        }
+
+        // Found %%EOF
         if (std::memcmp(&blob[i], eof_marker, 5) == 0) {
-            last_eof = i + 5;
+            size_t end = i + 5;
+
+            // Include trailing whitespace (CR, LF, spaces, tabs)
+            while (end < blob.size() &&
+                   (blob[end] == '\n' || blob[end] == '\r' ||
+                    blob[end] == ' '  || blob[end] == '\t'))
+            {
+                end++;
+            }
+
+            last_eof = end;
         }
     }
 
     return last_eof;
 }
+
+
 
 REGISTER_PARSER(PDFParser)

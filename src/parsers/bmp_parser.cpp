@@ -22,6 +22,7 @@ public:
         ScanResult r;
         r.offset = offset;
         r.type = "BMP";
+        r.extractorType = "RAW";
         r.isValid = false;
         r.length = 0;
 

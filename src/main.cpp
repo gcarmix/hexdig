@@ -89,6 +89,9 @@ Config parseArgs(int argc, char* argv[]) {
 
     args.addOption("-v", false, "verbose"); 
     args.addOption("--verbose", false, "verbose");
+    
+    args.addOption("-M", false, "matrioshka"); 
+    args.addOption("--matrioshka", false, "matrioshka");
 
     args.addOption("-C", true, "extractionPath"); 
     args.addOption("--extractionPath", true, "extractionPath");
@@ -120,6 +123,12 @@ Config parseArgs(int argc, char* argv[]) {
     {
        Logger::debug("Enabling verbose Output");
         config.verbose = true;
+    }
+
+    if(args.has("matrioshka"))
+    {
+       Logger::debug("Enabling Matrioshka scan");
+       config.recurseDepth = 10;
     }
 
     if(args.has("recurse"))
@@ -154,6 +163,7 @@ Config parseArgs(int argc, char* argv[]) {
         std::cout << "Usage: scanner [-e] [-r N or -rN] [-j [file]] <input_file>\n"
                       << "  -e         Enable extraction\n"
                       << "  -r N       Enable recursive scan with depth N (default 1)\n"
+                      << "  -M         Matrioshka scan (recurse 10 times) \n"
                       << "  -O [file]  Output in JSON format, optionally to given file\n"
                       << "  -C [path]  Custom extraction path\n"
                       << "  -d         Enable Debug mode\n"

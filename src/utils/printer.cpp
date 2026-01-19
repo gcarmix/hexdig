@@ -73,7 +73,7 @@ void printResult(const ScanResult& result, int depth) {
     std::cout << "0x" << std::hex << result.offset
               << "\t\t[" << result.type<<"]"
               << "\t\t" << std::dec << result.length;
-    std::cout << "\t\t" << result.info.substr(0,16)<< "\n";
+    std::cout << "\t\t" << result.info.substr(0,16)<< (result.extracted?"(extracted)":"")<< "\n";
 
    /* for (const auto& child : result.children) {
         printResult(child, depth + 1);
@@ -104,7 +104,7 @@ static void printScanResult(const ScanResult& sr, const std::string& prefix = ""
     std::ostringstream oss;
     oss << ansi::cyan << "[0x" << std::hex << std::setw(4) << std::setfill('0') << sr.offset << "]" << ansi::reset
         << " " << ansi::bold << ansi::yellow << sr.type << ansi::reset
-        << " (length=" << ansi::green << std::dec << sr.length << ansi::reset << ")";
+        << " (length=" << ansi::green << std::dec << sr.length << ansi::reset << ")" << (sr.extracted?"(extracted)":"");
 
     std::cout << prefix << (last ? "└── " : "├── ") << oss.str() << "\n";
 

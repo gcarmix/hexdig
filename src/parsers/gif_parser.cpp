@@ -19,6 +19,7 @@ public:
         ScanResult r;
         r.offset = offset;
         r.type = "GIF";
+        r.extractorType = "RAW";
         r.isValid = false;
         r.length = 0;
 

@@ -19,14 +19,6 @@ Scanner::Scanner(bool enableExtraction, int recursionDepth, int currentDepth,fs:
 
 }
 
-/*void Scanner::printResult(const ScanResult& result, int depth) {
-    std::string indent(depth * 2, ' ');
-    std::cout << indent << "↳ Offset: 0x" << std::hex << result.offset
-              << ", Type: " << result.type
-              << ", Length: " << std::dec << result.length
-              << ", Info: " << result.info
-              << ", Source: " << result.source << "\n";
-}*/
 
 std::vector<ScanResult> Scanner::scan(fs::path filePath) {
     Logger::debug("Scanner::scan " + filePath.string()+"("+std::to_string(currentDepth)+")");
@@ -70,12 +62,12 @@ std::vector<ScanResult> Scanner::scan(fs::path filePath) {
                 total += diff;
                 Logger::debug(std::to_string(diff));
 
-                bool extracted = false;
+                result.extracted = false;
                 if(result.isValid)
                 {
-                    //printResult(result, currentDepth);  // 👈 Print parent first
-                    
+
                     if (enableExtraction && recursionDepth > 0) {
+                        
                         for (auto& extractor : extractors){
                             if(result.extractorType.compare(extractor->name()) == 0 )
                             {
@@ -83,16 +75,17 @@ std::vector<ScanResult> Scanner::scan(fs::path filePath) {
                                 Logger::debug(to_hex(offset) + " " + filePath.filename().string());
                                 if(extractor->name() == "RAW")
                                 {
-                                    extractor->extract(blob, offset, extractionPath,result.type);
+                                    if(result.length < blob.size())
+                                        extractor->extract(blob, offset, extractionPath,result.type);
                                 }
                                 else
                                 {
                                     extractor->extract(blob, offset, extractionPath);
                                 }
                                 
-                                extracted = true;
+                                result.extracted = true;
 
-                                if(recursionDepth > 0)
+                                if(recursionDepth > 0 && result.extractorType != "RAW")
                                 {
                                     for (const auto& entry : std::filesystem::recursive_directory_iterator(extractionPath.string()+"/"+to_hex(offset))) {
                                             if (entry.is_regular_file()) {
@@ -107,6 +100,7 @@ std::vector<ScanResult> Scanner::scan(fs::path filePath) {
                                                 scanner.alreadyAnalyzed = alreadyAnalyzed;
                                                 std::vector<ScanResult> tmpRes = scanner.scan(entry.path());
                                                 alreadyAnalyzed = scanner.alreadyAnalyzed;
+                                                
                                                 result.children.insert(result.children.end(),std::make_move_iterator(tmpRes.begin()),std::make_move_iterator(tmpRes.end()));
            
 
@@ -120,12 +114,14 @@ std::vector<ScanResult> Scanner::scan(fs::path filePath) {
                         
     
                     }
-                    if(offset == 0 && result.length == blob.size() && extracted == false && !verbose)
+
+                    if(offset == 0 && result.length == blob.size() && result.extracted == false && !verbose)
                     {
                         Logger::debug("ignoring complete file");
                     }
                     else
                     {
+                        Logger::debug("Pushing detected file with offset "+std::to_string(offset)+" len: " + std::to_string(result.length)+ " blob: " + std::to_string(blob.size()));
                         results.push_back(result);
                     }
                     

@@ -82,6 +82,7 @@ ScanResult JPGParser::parse(const std::vector<uint8_t>& blob, size_t offset) {
     ScanResult result;
     result.offset = offset;
     result.type = "JPG";
+    result.extractorType = "RAW";
     result.info = info.str();
     result.length = length;
     result.isValid = true;
