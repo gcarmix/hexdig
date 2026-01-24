@@ -38,7 +38,7 @@ void extract(const std::vector<uint8_t>& blob,
     if (imageName.empty()) imageName = "uimage_payload";
 
     // Example: assume payload starts right after magic and runs to end of blob
-    std::vector<uint8_t> payload(blob.begin() + offset + MAGIC_SIZE, blob.end());
+    std::vector<uint8_t> payload(blob.begin() + offset + 64, blob.end());
 
     // Build output folder
     extractionPath = extractionPath /fs::path(to_hex(offset)); 

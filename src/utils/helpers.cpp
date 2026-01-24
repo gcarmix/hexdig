@@ -89,3 +89,20 @@ std::string to_hex(int value)
    std::string hex(buffer.data(), result.ptr);
    return hex;
 }
+
+// CRC-16/ARC (polynomial 0xA001, initial value 0x0000)
+uint16_t crc16(const uint8_t* data, size_t len) {
+    uint16_t crc = 0x0000;
+
+    while (len--) {
+        crc ^= *data++;
+        for (int i = 0; i < 8; i++) {
+            if (crc & 1)
+                crc = (crc >> 1) ^ 0xA001;
+            else
+                crc >>= 1;
+        }
+    }
+
+    return crc;
+}

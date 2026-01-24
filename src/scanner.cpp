@@ -87,20 +87,15 @@ std::vector<ScanResult> Scanner::scan(fs::path filePath) {
 
                                 if(recursionDepth > 0 && result.extractorType != "RAW")
                                 {
-                                    for (const auto& entry : std::filesystem::recursive_directory_iterator(extractionPath.string()+"/"+to_hex(offset))) {
+                                    for (const auto& entry : std::filesystem::directory_iterator(extractionPath.string()+"/"+to_hex(offset))) {
                                             if (entry.is_regular_file()) {
-                                                bool found = std::find(alreadyAnalyzed.begin(), alreadyAnalyzed.end(), entry.path().string()) != alreadyAnalyzed.end();
-                                                if(found)
-                                                    continue;
-                                                else
-                                                    alreadyAnalyzed.push_back(entry.path().string());
+
                                                 Logger::debug("SCANREC: "+entry.path().string());
 
                                                 Scanner scanner(true, recursionDepth - 1,currentDepth+1,entry.path().parent_path());
-                                                scanner.alreadyAnalyzed = alreadyAnalyzed;
+    
                                                 std::vector<ScanResult> tmpRes = scanner.scan(entry.path());
-                                                alreadyAnalyzed = scanner.alreadyAnalyzed;
-                                                
+
                                                 result.children.insert(result.children.end(),std::make_move_iterator(tmpRes.begin()),std::make_move_iterator(tmpRes.end()));
            
 

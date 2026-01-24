@@ -28,3 +28,5 @@ uint64_t read_be64(const std::vector<uint8_t>& blob, size_t offset);
 
  std::string format_timestamp(uint32_t ts);
 std::string to_hex(int value);
+
+uint16_t crc16(const uint8_t* data, size_t len);

@@ -17,7 +17,6 @@ public:
 
     std::vector<ScanResult> results;
     std::unordered_set<size_t> visitedOffsets;
-    std::vector<std::string> alreadyAnalyzed;
     Scanner(bool enableExtraction, int recursionDepth, int currentDepth = 0,fs::path extractionPath = "extractions/",bool verbose = false);
     std::vector<ScanResult> scan(fs::path filePath);
 
