@@ -20,7 +20,9 @@ private:
 bool PEParser::match(const std::vector<uint8_t>& blob, size_t offset) {
     return offset + 2 < blob.size() &&
            blob[offset] == 'M' &&
-           blob[offset + 1] == 'Z';
+           blob[offset + 1] == 'Z' &&
+           (blob[offset + 2] == 0x90 || blob[offset + 2] == 0x00) &&
+           blob[offset + 3] == 0x00;
 }
 
 ScanResult PEParser::parse(const std::vector<uint8_t>& blob, size_t offset) {

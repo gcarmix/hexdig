@@ -27,18 +27,26 @@ std::vector<ScanResult> Scanner::scan(fs::path filePath) {
         Logger::error("Error, not a regular file");
         return results;
     }
-    std::ifstream file(filePath, std::ios::binary);
+    std::ifstream file(filePath, std::ios::binary | std::ios::ate);
     if (!file) {
         Logger::error("Error: Cannot open file " + filePath.string());
         return results;
     }
 
-    std::vector<uint8_t> blob((std::istreambuf_iterator<char>(file)),
-                               std::istreambuf_iterator<char>());
+
+
+    std::streamsize size = file.tellg();
+    file.seekg(0, std::ios::beg);
+    Logger::debug(std::to_string(size));
+    std::vector<uint8_t> blob(size);
+    if (!file.read(reinterpret_cast<char*>(blob.data()), size)) {
+        throw std::runtime_error("Failed to read file");
+    }
+
     
     size_t offset = 0;
-    //Logger::debug("BLOBNAME: "+blobName);
-    //Logger::debug("EXTRPATH: "+extractionPath.string());
+    Logger::debug("BLOB LOADED");
+    
     extractionPath = extractionPath / fs::path(filePath.filename().string() + ".extracted");
     int total = 0;
     while (offset < blob.size()) {

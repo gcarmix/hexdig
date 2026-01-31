@@ -6,7 +6,8 @@
 #include <iomanip>
 #include <sstream>
 
-#define MAX_ANALYZED_FILE_SIZE 1024*1024*1024
+
+#define MAX_ANALYZED_FILE_SIZE 2*1024*1024*1024UL
 //
 // Big-endian readers
 //
