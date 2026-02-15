@@ -15,6 +15,9 @@ file(GLOB_RECURSE SRC_FILES
 
 if (UNIX)
     find_package(ZLIB REQUIRED)
+    find_package(LibLZMA REQUIRED)
+    find_path(LZO_INCLUDE_DIR lzo/lzo1x.h) 
+    find_library(LZO_LIBRARY NAMES lzo2) 
 elseif (WIN32)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
     set(BUILD_SHARED_LIBS OFF)
@@ -33,7 +36,7 @@ include_directories(
 )
 
 add_executable(hexdig ${SRC_FILES})
-target_link_libraries(hexdig  ZLIB::ZLIB)
+target_link_libraries(hexdig  ZLIB::ZLIB LibLZMA::LibLZMA ${LZO_LIBRARY})
 target_link_options(hexdig PRIVATE -s)
 install (TARGETS hexdig
     RUNTIME DESTINATION bin

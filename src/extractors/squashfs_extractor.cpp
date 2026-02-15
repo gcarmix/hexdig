@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <cstdlib>
+#include <iomanip>
 #include <filesystem>
 #include "helpers.hpp"
 #include "logger.hpp"
@@ -24,10 +25,22 @@ public:
 
         std::string cmd = "sasquatch -d " + extractionPath.string() + " " + imagePath + " > /dev/null 2>&1";
         int result = std::system(cmd.c_str());
-        if(result != 0)
+
+        if(result == -1)
         {
-            Logger::error("can't run sasquatch, if you are on UNIX systems verify that the software is installed (feature not available on Windows systems)");
+            
         }
+        else if(WIFEXITED(result))
+        {
+            if(WEXITSTATUS(result)==127)
+            {
+
+                Logger::error("can't run sasquatch, if you are on UNIX systems verify that the software is installed (feature not available on Windows systems)");
+      
+            }
+      }
+        
+
         fs::remove(imagePath);
         /*if (result != 0) {
             std::cerr << "[SquashFSExtractor] sasquatch failed at offset " << offset << "\n";

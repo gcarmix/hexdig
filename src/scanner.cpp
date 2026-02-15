@@ -95,20 +95,32 @@ std::vector<ScanResult> Scanner::scan(fs::path filePath) {
 
                                 if(recursionDepth > 0 && result.extractorType != "RAW")
                                 {
-                                    for (const auto& entry : std::filesystem::directory_iterator(extractionPath.string()+"/"+to_hex(offset))) {
-                                            if (entry.is_regular_file()) {
 
-                                                Logger::debug("SCANREC: "+entry.path().string());
+                                    std::vector<fs::path> filesToScan;
 
-                                                Scanner scanner(true, recursionDepth - 1,currentDepth+1,entry.path().parent_path());
-    
-                                                std::vector<ScanResult> tmpRes = scanner.scan(entry.path());
-
-                                                result.children.insert(result.children.end(),std::make_move_iterator(tmpRes.begin()),std::make_move_iterator(tmpRes.end()));
-           
-
-                                            }
+                                    for (const auto& entry :
+                                        fs::recursive_directory_iterator(extractionPath / to_hex(offset)))
+                                    {
+                                        if (entry.is_regular_file()) {
+                                            filesToScan.push_back(entry.path());
                                         }
+                                    }
+
+                                    for (const auto& file : filesToScan) {
+                                        Logger::debug("SCANREC: " + file.string());
+
+                                        Scanner scanner(true, recursionDepth - 1, currentDepth + 1, file.parent_path());
+                                        auto tmpRes = scanner.scan(file);
+
+                                        result.children.insert(
+                                            result.children.end(),
+                                            std::make_move_iterator(tmpRes.begin()),
+                                            std::make_move_iterator(tmpRes.end())
+                                        );
+                                    }
+
+
+
 
                                 }
                                 break;

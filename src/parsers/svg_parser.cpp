@@ -57,7 +57,7 @@ public:
         ScanResult r;
         r.offset = offset;
         r.type = "SVG";
-        r.extractorType = "RAW"; // or whatever raw extractor you use
+        r.extractorType = "";
         r.isValid = false;
         r.length = 0;
 
