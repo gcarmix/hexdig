@@ -162,6 +162,7 @@ Run `hexdig --help` for all available options.
 
 
 - AES
+- Android Sparse
 - ARJ
 - BMP
 - BZIP2
@@ -169,6 +170,7 @@ Run `hexdig --help` for all available options.
 - CPIO
 - CRAMFS
 - CRC
+- DEB
 - DTB
 - ELF
 - FAT
@@ -187,6 +189,7 @@ Run `hexdig --help` for all available options.
 - SquashFS
 - TAR
 - UImage
+- UBI
 - XZ
 - ZIP
 
@@ -288,4 +291,3 @@ Open an issue or start a discussion on GitHub.
 
 
 Happy digging 🧑‍💻
-

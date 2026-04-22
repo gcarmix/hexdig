@@ -78,27 +78,15 @@ public:
             cursor += 2; // skip header CRC16
         }
 
-        // Validate trailer
         if (blob.size() < offset + 18) {
             r.length = blob.size() - offset;
             r.info = "Invalid GZIP: too short";
             return r;
         }
 
-        size_t trailerPos = blob.size() - 8;
-        uint32_t crc32Trailer = blob[trailerPos] |
-                                (blob[trailerPos+1] << 8) |
-                                (blob[trailerPos+2] << 16) |
-                                (blob[trailerPos+3] << 24);
-        uint32_t isizeTrailer = blob[trailerPos+4] |
-                                (blob[trailerPos+5] << 8) |
-                                (blob[trailerPos+6] << 16) |
-                                (blob[trailerPos+7] << 24);
-
-        info << ", trailer CRC32=0x" << std::hex << crc32Trailer
-             << ", ISIZE=" << std::dec << isizeTrailer;
-
-        // Recompute CRC32 and ISIZE by decompressing
+        // Decompress to determine actual stream length and recompute CRC32/ISIZE.
+        // zlib consumes the 8-byte gzip trailer as part of the stream, so
+        // strm.total_in after Z_STREAM_END is the exact compressed length.
         z_stream strm{};
         strm.next_in = const_cast<Bytef*>(blob.data() + offset);
         strm.avail_in = blob.size() - offset;
@@ -144,11 +132,30 @@ public:
 
         } while (ret != Z_STREAM_END);
 
+        size_t streamLen = strm.total_in;
         inflateEnd(&strm);
 
+        if (streamLen < 8 || offset + streamLen > blob.size()) {
+            r.length = blob.size() - offset;
+            r.info = "Invalid GZIP: stream length out of bounds";
+            return r;
+        }
+
+        size_t trailerPos = offset + streamLen - 8;
+        uint32_t crc32Trailer = blob[trailerPos] |
+                                (blob[trailerPos+1] << 8) |
+                                (blob[trailerPos+2] << 16) |
+                                (blob[trailerPos+3] << 24);
+        uint32_t isizeTrailer = blob[trailerPos+4] |
+                                (blob[trailerPos+5] << 8) |
+                                (blob[trailerPos+6] << 16) |
+                                (blob[trailerPos+7] << 24);
+
+        info << ", trailer CRC32=0x" << std::hex << crc32Trailer
+             << ", ISIZE=" << std::dec << isizeTrailer;
 
         bool crcMatch = (crc32Calc == crc32Trailer);
-        bool sizeMatch = (isizeCalc == isizeTrailer);
+        bool sizeMatch = (isizeCalc == (isizeTrailer));
 
         info << ", recomputed CRC32=0x" << std::hex << crc32Calc
              << ", recomputed ISIZE=" << std::dec << isizeCalc;
@@ -161,7 +168,7 @@ public:
             r.isValid = false;
         }
 
-        r.length = blob.size() - offset;
+        r.length = streamLen;
         r.info = info.str();
         return r;
     }

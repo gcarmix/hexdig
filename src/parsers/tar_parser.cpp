@@ -32,10 +32,52 @@ static size_t read_octal(const uint8_t* buf, size_t len) {
     return val;
 }
 
+// Known tar typeflags (POSIX + GNU + pax extensions).
+static bool isKnownTarTypeflag(uint8_t t) {
+    switch (t) {
+        case '\0': case '0': case '1': case '2': case '3':
+        case '4':  case '5': case '6': case '7':
+        case 'g':  case 'x': case 'L': case 'K':
+        case 'A':  case 'D': case 'M': case 'N':
+        case 'S':  case 'V':
+            return true;
+    }
+    return false;
+}
+
+// Classic tar header checksum: sum of all 512 bytes with the 8-byte chksum
+// field (offset 148..155) replaced by ASCII spaces. Old writers treated
+// bytes as signed — accept either interpretation.
+static bool tarChecksumMatches(const uint8_t* hdr) {
+    constexpr size_t CHK_OFF = 148;
+    constexpr size_t CHK_LEN = 8;
+
+    uint32_t unsigned_sum = 0;
+    int32_t  signed_sum   = 0;
+    for (size_t i = 0; i < 512; i++) {
+        uint8_t b = (i >= CHK_OFF && i < CHK_OFF + CHK_LEN) ? uint8_t(' ') : hdr[i];
+        unsigned_sum += b;
+        signed_sum   += static_cast<int8_t>(b);
+    }
+    size_t stored = read_octal(hdr + CHK_OFF, CHK_LEN);
+    if (stored == 0) return false;
+    return stored == unsigned_sum || (int32_t)stored == signed_sum;
+}
+
 bool TARParser::match(const std::vector<std::uint8_t>& blob, size_t offset) {
     if (offset + 512 > blob.size()) return false;
-    const char* magic = reinterpret_cast<const char*>(&blob[offset + 257]);
-    return (std::strncmp(magic, "ustar", 5) == 0);
+    const uint8_t* hdr = &blob[offset];
+
+    // POSIX ustar magic at offset 257. Also accept a zero magic (old v7 tar)
+    // only if the rest of the header is otherwise plausible — but for safety
+    // against false positives in binary data, require ustar here.
+    if (std::memcmp(hdr + 257, "ustar", 5) != 0) return false;
+
+    // Typeflag must be a defined value.
+    if (!isKnownTarTypeflag(hdr[156])) return false;
+
+    // Checksum over the whole header — this is the real discriminator.
+    return tarChecksumMatches(hdr);
 }
 
 ScanResult TARParser::parse(const std::vector<std::uint8_t>& blob, size_t offset) {

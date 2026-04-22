@@ -41,3 +41,19 @@ target_link_options(hexdig PRIVATE -s)
 install (TARGETS hexdig
     RUNTIME DESTINATION bin
 )
+
+enable_testing()
+
+if (UNIX)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    file(GLOB PY_TEST_FILES "${CMAKE_SOURCE_DIR}/tests/test_*.py")
+    foreach(PY_TEST_FILE ${PY_TEST_FILES})
+        get_filename_component(PY_TEST_NAME ${PY_TEST_FILE} NAME_WE)
+        add_test(
+            NAME ${PY_TEST_NAME}
+            COMMAND ${Python3_EXECUTABLE} ${PY_TEST_FILE}
+                    $<TARGET_FILE:hexdig>
+                    ${CMAKE_BINARY_DIR}/tests/${PY_TEST_NAME}
+        )
+    endforeach()
+endif()

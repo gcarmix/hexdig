@@ -42,21 +42,17 @@ static size_t read_octal(const uint8_t* buf, size_t len) {
 }
 
 static std::string sanitize_path(const std::string& raw) {
-    fs::path p(raw);
+    // Force to relative: strips any root_name ("C:") and root_directory ("/")
+    // so a leading slash in the tar entry can't escape the extraction dir
+    // when used with operator/.
+    fs::path rel = fs::path(raw).relative_path();
 
-    // Remove leading slashes (avoid absolute paths)
-    while (!p.empty() && p.begin()->string().empty()) {
-        p = p.relative_path();
-    }
-
-    // Collapse ".." and "." components
     fs::path safe;
-    for (auto& part : p) {
-        if (part == "..") continue;
-        if (part == ".") continue;
-        safe /= part;
+    for (auto& part : rel) {
+        std::string s = part.string();
+        if (s.empty() || s == "." || s == "..") continue;
+        safe /= s;
     }
-
     return safe.string();
 }
 
