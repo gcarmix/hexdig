@@ -7,6 +7,9 @@
 #include <filesystem>
 #include "helpers.hpp"
 #include "logger.hpp"
+#ifndef _WIN32
+#include <sys/wait.h>
+#endif
 namespace fs = std::filesystem;
 class SquashFSExtractor : public BaseExtractor {
 public:
@@ -23,22 +26,25 @@ public:
         out.write(reinterpret_cast<const char*>(&blob[offset]), blob.size() - offset);
         out.close();
 
+#ifdef _WIN32
+        std::string cmd = "sasquatch -d " + extractionPath.string() + " " + imagePath + " > nul 2>&1";
+        std::system(cmd.c_str());
+#else
         std::string cmd = "sasquatch -d " + extractionPath.string() + " " + imagePath + " > /dev/null 2>&1";
         int result = std::system(cmd.c_str());
 
         if(result == -1)
         {
-            
+
         }
         else if(WIFEXITED(result))
         {
             if(WEXITSTATUS(result)==127)
             {
-
                 Logger::error("can't run sasquatch, if you are on UNIX systems verify that the software is installed (feature not available on Windows systems)");
-      
             }
-      }
+        }
+#endif
         
 
         fs::remove(imagePath);

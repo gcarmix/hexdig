@@ -10,7 +10,11 @@
 #include <string>
 #include <cstring>
 #include <cstdint>
+#include <algorithm>
 #include <sys/stat.h>
+#ifndef S_ISLNK
+#define S_ISLNK(m) 0
+#endif
 #include <zlib.h>
 #include <lzma.h>
 #include <lzo/lzo1x.h>
@@ -551,7 +555,9 @@ private:
                             }
                         }
                     }
-                    ::chmod(target_path.c_str(), mode & 07777);
+#ifndef _WIN32
+                    ::chmod(target_path.string().c_str(), mode & 07777);
+#endif
                     break;
                 } else if (S_ISLNK(mode)) {
                     // Jefferson writes symlink target from inode.data
