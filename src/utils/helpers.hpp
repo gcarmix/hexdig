@@ -5,6 +5,7 @@
 #include <ctime>
 #include <iomanip>
 #include <sstream>
+#include <initializer_list>
 
 
 #define MAX_ANALYZED_FILE_SIZE 2*1024*1024*1024UL
