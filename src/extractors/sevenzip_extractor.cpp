@@ -47,21 +47,19 @@ void extract(const std::vector<uint8_t>& blob,
         out.close();
         
         std::ostringstream cmd;
-        cmd << "7z x \"" << tempFileName.str() << "\" -o" << extractionPath << " -y -p\"\"";
+        cmd << find_7z() << " x \"" << tempFileName.str() << "\" -o" << extractionPath << " -y -p\"\"";
         #ifdef _WIN32
         cmd <<" > nul 2>&1";
-        Logger::debug("Running: "+cmd.str());
-        int result = std::system(cmd.str().c_str());
         #else
-        Logger::debug("Running: "+cmd.str());
         cmd <<" > /dev/null 2>&1";
-        int result = WEXITSTATUS(std::system(cmd.str().c_str()));
         #endif
-        
+        Logger::debug("Running: "+cmd.str());
+        int result = run_command(cmd.str());
 
-        
+
+
         if (result ==1 || result == 127) {
-            Logger::error( "SevenZipExtractor: Extraction failed with code "+ std::to_string(result) + ", please check that 7z executable is installed and available on PATH");
+            Logger::error( "SevenZipExtractor: Extraction failed with code "+ std::to_string(result) + ", please check that 7z executable is installed and available on PATH (or bundle 7zr.exe/7zz next to the application)");
         }
         fs::remove(tempFileName.str());
         //Logger::debug(std::to_string(scanner.recursionDepth));

@@ -32,3 +32,18 @@ uint64_t read_be64(const std::vector<uint8_t>& blob, size_t offset);
 std::string to_hex(int value);
 
 uint16_t crc16(const uint8_t* data, size_t len);
+
+// Locate the 7-Zip command-line binary. Prefers a copy bundled next to the
+// running executable (7zr.exe / 7za.exe / 7z.exe on Windows, 7zz / 7z elsewhere)
+// and falls back to a system-PATH name. Returns a string suitable for
+// substitution into a shell command (already quoted if it contains spaces).
+std::string find_7z();
+
+// Returns true if a 7-Zip executable is reachable: either bundled next to the
+// running executable or present in the system PATH. Cheap to call (cached).
+bool is_7z_available();
+
+// Run a shell command silently and return its exit code.
+// On Windows uses CreateProcessW with CREATE_NO_WINDOW so no cmd.exe window flashes.
+// On Unix wraps std::system and returns WEXITSTATUS.
+int run_command(const std::string& cmd);

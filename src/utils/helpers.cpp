@@ -106,3 +106,160 @@ uint16_t crc16(const uint8_t* data, size_t len) {
 
     return crc;
 }
+
+// ----------------------------------------------------------------------------
+// 7-Zip locator
+// ----------------------------------------------------------------------------
+#include <filesystem>
+#include <initializer_list>
+
+#ifdef _WIN32
+  #include <windows.h>
+#elif defined(__APPLE__)
+  #include <mach-o/dyld.h>
+  #include <climits>
+#else
+  #include <unistd.h>
+  #include <climits>
+#endif
+
+namespace {
+std::filesystem::path executable_dir() {
+#ifdef _WIN32
+    wchar_t buf[MAX_PATH];
+    DWORD n = GetModuleFileNameW(nullptr, buf, MAX_PATH);
+    if (n == 0 || n == MAX_PATH) return {};
+    return std::filesystem::path(buf).parent_path();
+#elif defined(__APPLE__)
+    char buf[PATH_MAX];
+    uint32_t size = sizeof(buf);
+    if (_NSGetExecutablePath(buf, &size) != 0) return {};
+    std::error_code ec;
+    auto p = std::filesystem::canonical(buf, ec);
+    return ec ? std::filesystem::path{} : p.parent_path();
+#else
+    std::error_code ec;
+    auto p = std::filesystem::canonical("/proc/self/exe", ec);
+    return ec ? std::filesystem::path{} : p.parent_path();
+#endif
+}
+} // namespace
+
+std::string find_7z() {
+    static std::string cached;
+    if (!cached.empty()) return cached;
+
+#ifdef _WIN32
+    const std::initializer_list<const char*> bundled = {"7zr.exe", "7za.exe", "7z.exe"};
+    const char* fallback = "7z";
+#else
+    const std::initializer_list<const char*> bundled = {"7zz", "7z"};
+    const char* fallback = "7zz";
+#endif
+
+    auto dir = executable_dir();
+    if (!dir.empty()) {
+        for (auto name : bundled) {
+            std::error_code ec;
+            auto candidate = dir / name;
+            if (std::filesystem::exists(candidate, ec)) {
+                // Quote so paths with spaces survive shell expansion.
+                cached = "\"" + candidate.string() + "\"";
+                return cached;
+            }
+        }
+    }
+
+    // Nothing bundled — rely on the OS PATH lookup performed by std::system().
+    cached = fallback;
+    return cached;
+}
+
+bool is_7z_available() {
+    static int cached = -1;  // -1 = unknown, 0 = no, 1 = yes
+    if (cached != -1) return cached == 1;
+
+    auto loc = find_7z();
+    // find_7z returns a quoted absolute path when a bundled binary was found.
+    if (!loc.empty() && loc.front() == '"') { cached = 1; return true; }
+
+    // Otherwise it returned a bare command name; walk PATH to verify.
+    const char* pathEnv = std::getenv("PATH");
+    if (!pathEnv) { cached = 0; return false; }
+
+#ifdef _WIN32
+    const char sep = ';';
+    const std::initializer_list<const char*> names = {"7z.exe", "7za.exe", "7zr.exe"};
+#else
+    const char sep = ':';
+    const std::initializer_list<const char*> names = {"7zz", "7z"};
+#endif
+
+    std::string path(pathEnv);
+    size_t start = 0;
+    while (start <= path.size()) {
+        size_t end = path.find(sep, start);
+        std::string dir = path.substr(start, end - start);
+        if (!dir.empty()) {
+            for (auto name : names) {
+                std::error_code ec;
+                if (std::filesystem::exists(std::filesystem::path(dir) / name, ec)) {
+                    cached = 1;
+                    return true;
+                }
+            }
+        }
+        if (end == std::string::npos) break;
+        start = end + 1;
+    }
+    cached = 0;
+    return false;
+}
+
+#ifdef _WIN32
+#include <vector>
+#endif
+
+int run_command(const std::string& cmd) {
+#ifdef _WIN32
+    // Build "cmd.exe /c <command>" so shell features (redirection, internal quoting) work,
+    // then run it via CreateProcessW with CREATE_NO_WINDOW to suppress the console flash.
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, cmd.c_str(), -1, nullptr, 0);
+    if (wlen <= 0) return -1;
+    std::vector<wchar_t> wcmd(wlen);
+    MultiByteToWideChar(CP_UTF8, 0, cmd.c_str(), -1, wcmd.data(), wlen);
+
+    std::wstring fullCmd;
+    fullCmd.reserve(wcmd.size() + 16);
+    fullCmd = L"cmd.exe /c \"";
+    fullCmd += wcmd.data();
+    fullCmd += L"\"";
+
+    STARTUPINFOW si{};
+    si.cb = sizeof(si);
+    PROCESS_INFORMATION pi{};
+
+    BOOL ok = CreateProcessW(
+        nullptr,
+        fullCmd.data(),     // mutable buffer required by CreateProcessW
+        nullptr, nullptr,
+        FALSE,
+        CREATE_NO_WINDOW,
+        nullptr, nullptr,
+        &si, &pi);
+    if (!ok) return -1;
+
+    WaitForSingleObject(pi.hProcess, INFINITE);
+    DWORD exitCode = 0;
+    GetExitCodeProcess(pi.hProcess, &exitCode);
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+    return static_cast<int>(exitCode);
+#else
+    int rc = std::system(cmd.c_str());
+    if (rc == -1) return rc;
+    if (WIFEXITED(rc)) return WEXITSTATUS(rc);
+    return -1;
+#endif
+}
+

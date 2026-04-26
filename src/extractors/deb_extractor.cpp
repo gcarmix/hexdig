@@ -114,18 +114,7 @@ bool extractArMembers(const std::vector<uint8_t>& blob, size_t offset, const fs:
 }
 
 int runCommand(const std::string& cmd) {
-#ifdef _WIN32
-    return std::system(cmd.c_str());
-#else
-    const int rc = std::system(cmd.c_str());
-    if (rc == -1) {
-        return rc;
-    }
-    if (WIFEXITED(rc)) {
-        return WEXITSTATUS(rc);
-    }
-    return rc;
-#endif
+    return run_command(cmd);
 }
 
 }  // namespace
@@ -154,7 +143,7 @@ public:
         }
 
         std::ostringstream cmd;
-        cmd << "7z x \"" << tempDebPath.string() << "\" -o\"" << extractionPath.string()
+        cmd << find_7z() << " x \"" << tempDebPath.string() << "\" -o\"" << extractionPath.string()
             << "\" -y -p\"\"";
 #ifndef _WIN32
         cmd << " > /dev/null 2>&1";
