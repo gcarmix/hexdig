@@ -40,7 +40,11 @@ Inspired by tools like **binwalk**, HexDig focuses on modern workflows, clear ou
 
 
 
-### From source
+### Quick install (Linux)
+
+The `install.sh` script detects your distribution, installs the build
+dependencies, then builds and installs HexDig with CMake. Supported
+families: Debian/Ubuntu, Fedora/RHEL, Arch, openSUSE, Alpine.
 
 ```bash
 
@@ -48,17 +52,130 @@ git clone https://github.com/gcarmix/hexdig.git
 
 cd hexdig
 
-mkdir build
-
-cd build
-
-cmake ..
-
-make -j8
-
-sudo make install
+./install.sh
 
 ```
+
+Useful flags:
+
+- `-y`, `--yes` — non-interactive (don't prompt before installing packages)
+- `--no-install` — only build the binary, don't run `cmake --install`
+- `--prefix=/path` — set a custom `CMAKE_INSTALL_PREFIX`
+- `-h`, `--help` — show usage
+
+
+
+### From source
+
+
+
+```bash
+
+git clone https://github.com/gcarmix/hexdig.git
+
+cd hexdig
+
+cmake -B build
+
+cmake --build build -j
+
+sudo cmake --install build
+
+```
+
+Build dependencies: a C++17 compiler, CMake (>= 3.12), `pkg-config`, and
+the development headers for `zlib`, `liblzma` (xz) and `lzo2`. On
+Debian/Ubuntu:
+
+```bash
+
+sudo apt install build-essential cmake pkg-config \
+                 zlib1g-dev liblzma-dev liblzo2-dev
+
+```
+
+
+
+### Debian / Ubuntu package
+
+To produce a `.deb`, install the packaging tools and run:
+
+```bash
+
+sudo apt install dpkg-dev debhelper devscripts cmake fakeroot lintian \
+                 zlib1g-dev liblzma-dev liblzo2-dev pkg-config
+
+./build-deb.sh --lintian
+
+```
+
+
+
+### Windows (MSYS2 / MinGW64) — recommended
+
+Install [MSYS2](https://www.msys2.org/), open the **MSYS2 MinGW 64-bit**
+shell, then install the toolchain and dependencies:
+
+```bash
+
+pacman -S --needed git \
+        mingw-w64-x86_64-toolchain \
+        mingw-w64-x86_64-cmake \
+        mingw-w64-x86_64-pkgconf \
+        mingw-w64-x86_64-zlib \
+        mingw-w64-x86_64-xz \
+        mingw-w64-x86_64-lzo2
+
+```
+
+Then build (still inside the MinGW64 shell):
+
+```bash
+
+git clone https://github.com/gcarmix/hexdig.git
+
+cd hexdig
+
+cmake -B build -G "MinGW Makefiles"
+
+cmake --build build -j
+
+```
+
+The resulting `build/hexdig.exe` is statically linked, so it can be
+copied and run on Windows machines without MSYS2 installed.
+
+
+
+### Windows (standalone MinGW)
+
+If you want to build outside MSYS2 with a plain MinGW-w64 toolchain,
+the `CMakeLists.txt` looks for the dependencies under `C:\devlibs\`:
+
+```text
+
+C:\devlibs\zlib\include\         zlib.h
+C:\devlibs\zlib\lib\             libz.a
+C:\devlibs\liblzma\include\      lzma.h
+C:\devlibs\liblzma\lib\          liblzma.a
+C:\devlibs\lzo\include\          lzo\lzo1x.h
+C:\devlibs\lzo\lib\              liblzo2.a
+
+```
+
+Once those are in place, build with:
+
+```bat
+
+cmake -B build -G "MinGW Makefiles"
+cmake --build build -j
+
+```
+
+
+
+> MSVC is not currently supported — the build relies on `-static` and
+> a few GCC-specific linker flags. Use MinGW (via MSYS2 or standalone).
 
 
 

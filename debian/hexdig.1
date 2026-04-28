@@ -1,0 +1,73 @@
+.TH HEXDIG 1 "April 2026" "hexdig 1.0.0" "User Commands"
+.SH NAME
+hexdig \- scan and extract embedded data from binary files
+.SH SYNOPSIS
+.B hexdig
+[\fIOPTIONS\fR] \fIFILE\fR
+.SH DESCRIPTION
+.B hexdig
+is a fast, extensible tool for scanning, inspecting, and extracting
+embedded data from binary files and firmware images. It detects embedded
+file signatures, identifies compressed data, file systems and common
+firmware formats, and can extract discovered data either selectively or
+recursively.
+.SH OPTIONS
+.TP
+.BR \-e ", " \-\-extract
+Enable extraction of detected items.
+.TP
+.BR \-r " " \fIN\fR ", " \-\-recurse " " \fIN\fR
+Enable recursive scan with depth \fIN\fR (default 1 when \-e is used).
+.TP
+.BR \-M ", " \-\-matrioshka
+Matrioshka scan: recurse up to 10 levels deep.
+.TP
+.BR \-O " " \fIFILE\fR ", " \-\-jsonPath " " \fIFILE\fR
+Write results in JSON format to \fIFILE\fR.
+.TP
+.BR \-C " " \fIPATH\fR ", " \-\-extractionPath " " \fIPATH\fR
+Write extracted data to \fIPATH\fR (default: \fIextractions/\fR).
+.TP
+.BR \-d ", " \-\-debug
+Enable debug logging.
+.TP
+.BR \-v ", " \-\-verbose
+Verbose output.
+.TP
+.BR \-h ", " \-\-help
+Show usage and exit.
+.SH EXAMPLES
+.PP
+Scan a firmware image:
+.PP
+.RS 4
+hexdig firmware.bin
+.RE
+.PP
+Scan and extract embedded data:
+.PP
+.RS 4
+hexdig \-e firmware.bin
+.RE
+.PP
+Recursive scan up to 10 levels deep, JSON output:
+.PP
+.RS 4
+hexdig \-M \-O results.json firmware.bin
+.RE
+.SH EXIT STATUS
+.B hexdig
+exits with status 0 on success and non-zero on error.
+.SH AUTHOR
+Written by Carmix <carmixdev@gmail.com>.
+.SH REPORTING BUGS
+Report bugs at <https://github.com/gcarmix/hexdig/issues>.
+.SH COPYRIGHT
+Copyright \(co 2024-2026 Carmix.
+License GPL-3: GNU GPL version 3 <https://gnu.org/licenses/gpl-3.0.html>.
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+.SH SEE ALSO
+.BR binwalk (1),
+.BR file (1),
+.BR xxd (1)

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
-project(hexdig)
+project(hexdig VERSION 1.0.0)
 
 
 set(CMAKE_CXX_STANDARD 17)
@@ -65,6 +65,7 @@ target_link_libraries(hexdig_lib PUBLIC ZLIB::ZLIB LibLZMA::LibLZMA ${LZO_LIBRAR
 # Standalone executable (unchanged external behaviour).
 add_executable(hexdig src/main.cpp)
 target_compile_options(hexdig PRIVATE -O3)
+target_compile_definitions(hexdig PRIVATE PROJECT_VERSION="${PROJECT_VERSION}")
 target_link_libraries(hexdig PRIVATE hexdig_lib)
 target_link_options(hexdig PRIVATE -s)
 

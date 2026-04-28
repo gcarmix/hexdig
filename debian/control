@@ -1,0 +1,28 @@
+Source: hexdig
+Section: utils
+Priority: optional
+Maintainer: Carmix <carmixdev@gmail.com>
+Build-Depends: debhelper-compat (= 13),
+               cmake,
+               pkg-config,
+               zlib1g-dev,
+               liblzma-dev,
+               liblzo2-dev
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+Homepage: https://github.com/gcarmix/hexdig
+Vcs-Git: https://github.com/gcarmix/hexdig.git
+Vcs-Browser: https://github.com/gcarmix/hexdig
+
+Package: hexdig
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: binary signature scanner and extractor
+ HexDig is a fast, extensible tool for scanning, inspecting, and
+ extracting embedded data from binary files and firmware images.
+ .
+ It detects embedded file signatures, identifies compressed data,
+ file systems and common firmware formats (UImage, SquashFS, CPIO,
+ CRAMFS, ROMFS, UBI, FAT, MBR, ELF, PE, DTB, ZIP, 7Z, RAR, GZIP,
+ BZIP2, XZ, LZMA and more), and can extract the discovered data
+ either selectively or recursively in "matrioshka" mode.
