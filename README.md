@@ -55,7 +55,7 @@ Pre-built binaries for the latest version are attached to the
 
   ```
 
-- 🪟 **Windows** — decompress `hexdig_version>_win_x64_portable.zip`, and start using it by running `hexdig.exe`a standalone static binary.
+- 🪟 **Windows** — decompress `hexdig_<version>_win_x64_portable.zip`, and start using it by running `hexdig.exe`a standalone static binary.
 7Zip executable and DLL are provided for extraction functionalities
 
 
