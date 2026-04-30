@@ -55,8 +55,8 @@ Pre-built binaries for the latest version are attached to the
 
   ```
 
-- 🪟 **Windows** — `hexdig.exe`, a standalone static binary. Drop it
-  anywhere on your `PATH` and run.
+- 🪟 **Windows** — decompress `hexdig_version>_win_x64_portable.zip`, and start using it by running `hexdig.exe`a standalone static binary.
+7Zip executable and DLL are provided for extraction functionalities
 
 
 
