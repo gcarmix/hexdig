@@ -9,11 +9,13 @@
 #   ./install.sh --yes            # non-interactive
 #   ./install.sh --no-install     # build only, skip "sudo make install"
 #   ./install.sh --prefix=/path   # custom CMAKE_INSTALL_PREFIX
+#   ./install.sh --uninstall      # remove files recorded in build/install_manifest.txt
 #
 set -euo pipefail
 
 ASSUME_YES=0
 DO_INSTALL=1
+DO_UNINSTALL=0
 PREFIX=""
 JOBS="$(nproc 2>/dev/null || echo 4)"
 
@@ -21,9 +23,10 @@ for arg in "$@"; do
     case "$arg" in
         -y|--yes)        ASSUME_YES=1 ;;
         --no-install)    DO_INSTALL=0 ;;
+        --uninstall)     DO_UNINSTALL=1 ;;
         --prefix=*)      PREFIX="${arg#--prefix=}" ;;
         -h|--help)
-            sed -n '2,12p' "$0"
+            sed -n '2,13p' "$0"
             exit 0
             ;;
         *)
@@ -92,6 +95,59 @@ if [ "$(id -u)" -ne 0 ]; then
         warn "Not running as root and 'sudo' was not found."
         warn "Re-run as root if dependency installation or 'make install' is required."
     fi
+fi
+
+# ---- uninstall (early exit) ------------------------------------------------
+if [ "$DO_UNINSTALL" -eq 1 ]; then
+    MANIFEST="$SCRIPT_DIR/build/install_manifest.txt"
+    FILES=()
+
+    if [ -f "$MANIFEST" ]; then
+        log "Reading installed files from $MANIFEST"
+        while IFS= read -r f; do
+            [ -n "$f" ] && FILES+=("$f")
+        done < "$MANIFEST"
+    else
+        # No manifest (e.g. build/ was deleted): fall back to the default
+        # install location. CMake's default CMAKE_INSTALL_PREFIX on Linux is
+        # /usr/local, and the project installs to ${prefix}/bin/hexdig.
+        FALLBACK_PREFIX="${PREFIX:-/usr/local}"
+        warn "No install manifest at $MANIFEST"
+        warn "Falling back to default install location under $FALLBACK_PREFIX"
+        FILES=("$FALLBACK_PREFIX/bin/hexdig")
+    fi
+
+    log "The following files will be removed (if present):"
+    ANY_PRESENT=0
+    for f in "${FILES[@]}"; do
+        if [ -e "$f" ] || [ -L "$f" ]; then
+            printf "  %s\n" "$f"
+            ANY_PRESENT=1
+        else
+            printf "  %s %s(not present)%s\n" "$f" "$C_YEL" "$C_RST"
+        fi
+    done
+
+    if [ "$ANY_PRESENT" -eq 0 ]; then
+        warn "None of the listed files exist — nothing to remove."
+        warn "If you installed with a custom prefix, pass --prefix=/that/path."
+        exit 0
+    fi
+
+    if ! confirm "Remove the present files?"; then
+        err "Aborted by user."
+        exit 1
+    fi
+
+    REMOVED=0
+    for f in "${FILES[@]}"; do
+        if [ -e "$f" ] || [ -L "$f" ]; then
+            $SUDO rm -f -- "$f" && REMOVED=$((REMOVED + 1))
+        fi
+    done
+
+    ok "Removed $REMOVED file(s)."
+    exit 0
 fi
 
 # ---- dependency check ------------------------------------------------------

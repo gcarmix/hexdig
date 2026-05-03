@@ -217,9 +217,12 @@ def build_fat(path: Path):
 def build_ext(path: Path):
     b = bytearray(4096)
     sb = 1024
-    b[sb + 0x00:sb + 0x04] = struct.pack("<I", 1)  # inodes
-    b[sb + 0x04:sb + 0x08] = struct.pack("<I", 8)  # blocks
-    b[sb + 0x18:sb + 0x1C] = struct.pack("<I", 0)  # block_size=1024
+    b[sb + 0x00:sb + 0x04] = struct.pack("<I", 1)  # s_inodes_count
+    b[sb + 0x04:sb + 0x08] = struct.pack("<I", 8)  # s_blocks_count
+    b[sb + 0x14:sb + 0x18] = struct.pack("<I", 1)  # s_first_data_block (1 for bs=1024)
+    b[sb + 0x18:sb + 0x1C] = struct.pack("<I", 0)  # s_log_block_size=0 -> bs=1024
+    b[sb + 0x20:sb + 0x24] = struct.pack("<I", 8)  # s_blocks_per_group
+    b[sb + 0x28:sb + 0x2C] = struct.pack("<I", 1)  # s_inodes_per_group
     # Signature pattern expected by match() at offset+0x38
     b[sb + 0x38:sb + 0x40] = bytes([0x53, 0xEF, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00])
     b[sb + 0x78:sb + 0x80] = b"TESTVOL\x00"

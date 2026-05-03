@@ -88,10 +88,14 @@ void TARExtractor::extract(const std::vector<uint8_t>& blob,
     fs::create_directories(outPath.parent_path());
 
     if (typeflag == '0' || typeflag == '\0') {
+        // size is octal-decoded from the header — clamp to remaining bytes so
+        // a truncated or corrupt archive can't read past the end of blob.
+        if (pos + 512 > blob.size()) break;
+        size_t writable = std::min<size_t>(size, blob.size() - (pos + 512));
         std::ofstream out(outPath, std::ios::binary);
         if (out) {
-            out.write(reinterpret_cast<const char*>(&blob[pos + 512]), size);
-            //std::cout << "Extracted file: " << outPath << " (" << size << " bytes)\n";
+            out.write(reinterpret_cast<const char*>(&blob[pos + 512]), writable);
+            //std::cout << "Extracted file: " << outPath << " (" << writable << " bytes)\n";
         }
     } else if (typeflag == '5') {
         fs::create_directories(outPath);

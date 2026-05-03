@@ -54,12 +54,25 @@ ScanResult DTBParser::parse(const std::vector<std::uint8_t>& blob, size_t offset
     h.size_dt_strings  = read_be32(blob,offset+32);
     h.size_dt_struct   = read_be32(blob,offset+36);
 
+    // Header fields are read from the file. With only a 4-byte magic the
+    // match is prone to false positives in unrelated binaries; clamp every
+    // subsequent read to blob.size() and reject obviously bogus headers.
+    size_t remaining = blob.size() - offset;
+    if (h.totalsize < sizeof(FdtHeader) || h.totalsize > remaining ||
+        h.off_dt_struct  > h.totalsize ||
+        h.off_dt_strings > h.totalsize ||
+        (size_t)h.off_dt_struct  + (size_t)h.size_dt_struct  > (size_t)h.totalsize ||
+        (size_t)h.off_dt_strings + (size_t)h.size_dt_strings > (size_t)h.totalsize) {
+        root.length = std::min<size_t>(h.totalsize, remaining);
+        root.isValid = false;
+        root.info = "Implausible DTB header (likely false positive)";
+        return root;
+    }
     root.length = h.totalsize;
 
+    const size_t imageEnd = offset + (size_t)h.totalsize;  // already clamped to blob.size() above
     size_t pos = offset + h.off_dt_struct;
-    size_t end = pos + h.size_dt_struct;
-    //std::vector<ScanResult*> stack;
-    //stack.push_back(&root);
+    size_t end = std::min<size_t>(pos + h.size_dt_struct, imageEnd);
 
     while (pos + 4 <= blob.size() && pos < end) {
         uint32_t token = read_be32(blob,pos); pos += 4;
@@ -87,17 +100,25 @@ ScanResult DTBParser::parse(const std::vector<std::uint8_t>& blob, size_t offset
                 break;
             }
             case FDT_PROP: {
+                if (pos + 8 > end) { root.isValid = false; root.info = "Truncated FDT_PROP header"; return root; }
                 uint32_t len = read_be32(blob,pos); pos += 4;
                 uint32_t nameoff = read_be32(blob,pos); pos += 4;
+                if ((size_t)len > end - pos) { root.isValid = false; root.info = "FDT_PROP length out of bounds"; return root; }
                 std::vector<uint8_t> val(blob.begin() + pos, blob.begin() + pos + len);
                 pos += len;
                 pos = (pos + 3) & ~3;
 
-                size_t str_start = offset + h.off_dt_strings + nameoff;
+                // Property name: nameoff is an offset into the strings block.
+                // Bound both the start and the strnlen-style read against the
+                // strings region so a bogus nameoff can't run past EOF.
                 std::string pname;
-                if (str_start < blob.size()) {
-                    const char* p = reinterpret_cast<const char*>(&blob[str_start]);
-                    pname = std::string(p);
+                size_t str_block = offset + h.off_dt_strings;
+                size_t str_block_end = str_block + h.size_dt_strings;
+                if ((size_t)nameoff < h.size_dt_strings) {
+                    size_t s = str_block + nameoff;
+                    size_t e = s;
+                    while (e < str_block_end && blob[e] != 0) e++;
+                    pname.assign(reinterpret_cast<const char*>(&blob[s]), e - s);
                 }
 
                 /*ScanResult prop;

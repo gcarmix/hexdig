@@ -81,7 +81,17 @@ void extract(const std::vector<uint8_t>& blob,
         Logger::error("DTBExtractor: Invalid magic at offset " + to_hex(offset));
         return;
     }
-    extractionPath = extractionPath /fs::path(to_hex(offset)); 
+    // Reject implausible headers before walking — fields are file-controlled.
+    size_t remaining = blob.size() - offset;
+    if (h.totalsize < sizeof(FdtHeader) || h.totalsize > remaining ||
+        h.off_dt_struct  > h.totalsize ||
+        h.off_dt_strings > h.totalsize ||
+        (size_t)h.off_dt_struct  + (size_t)h.size_dt_struct  > (size_t)h.totalsize ||
+        (size_t)h.off_dt_strings + (size_t)h.size_dt_strings > (size_t)h.totalsize) {
+        Logger::error("DTBExtractor: Implausible header at offset " + to_hex(offset));
+        return;
+    }
+    extractionPath = extractionPath /fs::path(to_hex(offset));
 
     fs::create_directories(extractionPath);
 
@@ -92,7 +102,7 @@ void extract(const std::vector<uint8_t>& blob,
     }
 
     size_t pos = offset + h.off_dt_struct;
-    size_t end = pos + h.size_dt_struct;
+    size_t end = std::min<size_t>(pos + h.size_dt_struct, offset + h.totalsize);
     int depth = 0;
 
     auto indent = [&](int d){ return std::string(d * 2, ' '); };
@@ -117,17 +127,22 @@ void extract(const std::vector<uint8_t>& blob,
                 break;
             }
             case FDT_PROP: {
+                if (pos + 8 > end) { Logger::error("DTBExtractor: Truncated FDT_PROP header"); return; }
                 uint32_t len = read_be32(blob, pos); pos += 4;
                 uint32_t nameoff = read_be32(blob, pos); pos += 4;
+                if ((size_t)len > end - pos) { Logger::error("DTBExtractor: FDT_PROP length out of bounds"); return; }
                 std::vector<uint8_t> val(blob.begin() + pos, blob.begin() + pos + len);
                 pos += len;
                 pos = (pos + 3) & ~3;
 
-                size_t str_start = offset + h.off_dt_strings + nameoff;
                 std::string pname;
-                if (str_start < blob.size()) {
-                    const char* p = reinterpret_cast<const char*>(&blob[str_start]);
-                    pname = std::string(p);
+                size_t str_block = offset + h.off_dt_strings;
+                size_t str_block_end = str_block + h.size_dt_strings;
+                if ((size_t)nameoff < h.size_dt_strings) {
+                    size_t s = str_block + nameoff;
+                    size_t e = s;
+                    while (e < str_block_end && blob[e] != 0) e++;
+                    pname.assign(reinterpret_cast<const char*>(&blob[s]), e - s);
                 }
 
                 out << indent(depth) << pname << " = " << format_value(val) << ";\n";

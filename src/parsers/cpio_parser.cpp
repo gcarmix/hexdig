@@ -29,7 +29,9 @@ ScanResult CPIOParser::parse(const std::vector<std::uint8_t>& blob, size_t offse
     result.info = "CPIO archive";
     result.isValid = true;
     size_t pos = offset;
-    while (pos + 110 < blob.size()) {
+    // Each header is 110 bytes; we then read 10 bytes at +110 (TRAILER check)
+    // and 8-byte hex fields at +54 and +94. Guard the largest of these reads.
+    while (pos + 120 <= blob.size()) {
         if (!is_cpio_magic(blob, pos)) break;
 
         std::string name(reinterpret_cast<const char*>(&blob[pos + 110]), 10);
