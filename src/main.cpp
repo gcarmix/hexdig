@@ -10,6 +10,7 @@
 #include "logger.hpp"
 #include <chrono>
 #include "utils/printer.hpp"
+#include "utils/helpers.hpp"
 namespace fs = std::filesystem;
 struct Config {
     bool extract = false;
@@ -179,6 +180,7 @@ Config parseArgs(int argc, char* argv[]) {
 }
 
 int main(int argc, char* argv[]) {
+    enable_ansi_colors();
     Logger::setLevel(LogLevel::INFO);
     Logger::info(std::string("HexDig v") + PROJECT_VERSION);
     

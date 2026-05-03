@@ -263,3 +263,23 @@ int run_command(const std::string& cmd) {
 #endif
 }
 
+void enable_ansi_colors() {
+#ifdef _WIN32
+    auto enable_for = [](DWORD which) {
+        HANDLE h = GetStdHandle(which);
+        if (h == INVALID_HANDLE_VALUE || h == nullptr) return;
+        DWORD mode = 0;
+        if (GetConsoleMode(h, &mode)) {
+            SetConsoleMode(h, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+        }
+    };
+    enable_for(STD_OUTPUT_HANDLE);
+    enable_for(STD_ERROR_HANDLE);
+
+    // Switch the console output code page to UTF-8 so multi-byte sequences
+    // (box-drawing characters ─ │ ├ └, accented letters, etc.) render correctly
+    // instead of being interpreted under the legacy OEM code page.
+    SetConsoleOutputCP(CP_UTF8);
+#endif
+}
+

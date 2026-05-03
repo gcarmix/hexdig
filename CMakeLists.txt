@@ -26,9 +26,23 @@ if (UNIX)
 elseif (MINGW)
     # MSYS2/MinGW64: install deps with pacman:
     #   pacman -S mingw-w64-x86_64-zlib mingw-w64-x86_64-xz mingw-w64-x86_64-lzo2
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
     set(BUILD_SHARED_LIBS OFF)
-    find_package(ZLIB REQUIRED)
+
+    # Prefer .a over .dll.a so find_package / find_library return static
+    # archives — the default order on MinGW returns .dll.a first.
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .a .lib)
+
+    # Bypass find_package(ZLIB): Qt's WrapZLIB has already created the
+    # ZLIB::ZLIB imported target pointing at the dynamic import library by
+    # the time we get here, and re-finding cannot replace that target. Link
+    # the static archive directly via its file path.
+    unset(LIBLZMA_LIBRARY CACHE)
+    unset(LIBLZMA_LIBRARY_RELEASE CACHE)
+    unset(LIBLZMA_LIBRARY_DEBUG CACHE)
+    unset(LZO_LIBRARY CACHE)
+
+    find_library(ZLIB_STATIC_LIB NAMES libz.a z REQUIRED)
+    find_path(ZLIB_INCLUDE_DIR zlib.h REQUIRED)
     find_package(LibLZMA REQUIRED)
     find_path(LZO_INCLUDE_DIR lzo/lzo1x.h)
     find_library(LZO_LIBRARY NAMES lzo2)
@@ -60,7 +74,15 @@ target_include_directories(hexdig_lib PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src/utils"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/common"
 )
-target_link_libraries(hexdig_lib PUBLIC ZLIB::ZLIB LibLZMA::LibLZMA ${LZO_LIBRARY})
+
+# On MinGW link the static zlib archive directly (see ZLIB_STATIC_LIB above);
+# elsewhere keep the conventional ZLIB::ZLIB target.
+if(MINGW AND ZLIB_STATIC_LIB)
+    target_include_directories(hexdig_lib PUBLIC "${ZLIB_INCLUDE_DIR}")
+    target_link_libraries(hexdig_lib PUBLIC "${ZLIB_STATIC_LIB}" LibLZMA::LibLZMA ${LZO_LIBRARY})
+else()
+    target_link_libraries(hexdig_lib PUBLIC ZLIB::ZLIB LibLZMA::LibLZMA ${LZO_LIBRARY})
+endif()
 
 # Standalone executable (unchanged external behaviour).
 add_executable(hexdig src/main.cpp)
@@ -68,6 +90,17 @@ target_compile_options(hexdig PRIVATE -O3)
 target_compile_definitions(hexdig PRIVATE PROJECT_VERSION="${PROJECT_VERSION}")
 target_link_libraries(hexdig PRIVATE hexdig_lib)
 target_link_options(hexdig PRIVATE -s)
+
+# Windows: produce a fully self-contained executable. Combined with the
+# CMAKE_FIND_LIBRARY_SUFFIXES override above (so zlib/lzma/lzo come in as
+# static archives), this leaves only Win32 system DLLs as runtime deps.
+if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_link_options(hexdig PRIVATE
+        -static
+        -static-libgcc
+        -static-libstdc++
+    )
+endif()
 
 install(TARGETS hexdig
     RUNTIME DESTINATION bin

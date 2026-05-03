@@ -47,3 +47,8 @@ bool is_7z_available();
 // On Windows uses CreateProcessW with CREATE_NO_WINDOW so no cmd.exe window flashes.
 // On Unix wraps std::system and returns WEXITSTATUS.
 int run_command(const std::string& cmd);
+
+// Enable ANSI escape sequence interpretation on the console (no-op on non-Windows).
+// On Windows 10+ this turns on ENABLE_VIRTUAL_TERMINAL_PROCESSING for stdout/stderr,
+// so [...m colour codes are rendered instead of being printed literally.
+void enable_ansi_colors();
