@@ -47,10 +47,14 @@ static void extractInode(const std::vector<uint8_t>& blob, size_t base, bool le,
     if (isDir(ino.mode)) {
         fs::create_directories(outDir / name);
         size_t cursor = base + ino.offset;
-        size_t end = base + ino.size;
+        // Inode fields are file-controlled — clamp directory end to blob size
+        // and bounds-check the per-entry name read so a corrupt or
+        // false-positive image can't read past EOF.
+        size_t end = std::min<size_t>(base + ino.size, blob.size());
         while (cursor + 12 <= end) {
             CramfsInode child = parseInode(blob, cursor, le);
             cursor += 12;
+            if (cursor + child.namelen > end) break;
             std::string childName;
             for (int i = 0; i < child.namelen; i++) {
                 childName.push_back((char)blob[cursor++]);
@@ -87,9 +91,10 @@ void CramFSExtractor::extract(const std::vector<std::uint8_t>& blob,
     if (magicLE != 0x28CD3D45u && magicLE != 0x453DCD28u) le = false;
 
     // Root inode at offset + 0x40
+    if (offset + 0x40 + 12 > blob.size()) return;
     CramfsInode root = parseInode(blob, offset + 0x40, le);
     std::string rootName;
-    if (root.namelen) {
+    if (root.namelen && offset + 0x40 + 12 + root.namelen <= blob.size()) {
         for (int i = 0; i < root.namelen; i++) {
             rootName.push_back((char)blob[offset + 0x40 + 12 + i]);
         }

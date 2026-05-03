@@ -15,11 +15,12 @@ std::string name() const override { return "UIMAGE"; };
 void extract(const std::vector<uint8_t>& blob,
                               size_t offset,
                               fs::path extractionPath) {
-    if (offset + 8 > blob.size()) return;
+    // The uImage header is 64 bytes; we then read the image name field
+    // (bytes 32–63) and slice the payload starting at byte 64. All three
+    // require the full header to be present.
+    if (offset + 64 > blob.size()) return;
     const uint8_t UIMAGE_MAGIC[] = {0x27, 0x05, 0x19, 0x56};  // Replace with actual magic
     const size_t MAGIC_SIZE = sizeof(UIMAGE_MAGIC);
-
-    if (offset + MAGIC_SIZE > blob.size()) return;
 
     // Check binary signature
     for (size_t i = 0; i < MAGIC_SIZE; ++i) {
@@ -37,7 +38,7 @@ void extract(const std::vector<uint8_t>& blob,
     }
     if (imageName.empty()) imageName = "uimage_payload";
 
-    // Example: assume payload starts right after magic and runs to end of blob
+    // Payload starts right after the 64-byte header and runs to end of blob.
     std::vector<uint8_t> payload(blob.begin() + offset + 64, blob.end());
 
     // Build output folder

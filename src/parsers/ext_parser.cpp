@@ -68,7 +68,10 @@ ScanResult parse(const std::vector<uint8_t>& blob, size_t offset) override {
     // Read fields
     uint32_t inodes = read_le32(blob, sb + 0x00);
     uint32_t blocks = read_le32(blob, sb + 0x04);
+    uint32_t first_data_block = read_le32(blob, sb + 0x14);
     uint32_t log_block_size = read_le32(blob, sb + 0x18);
+    uint32_t blocks_per_group = read_le32(blob, sb + 0x20);
+    uint32_t inodes_per_group = read_le32(blob, sb + 0x28);
 
     if (inodes == 0 || blocks == 0) {
         r.info = "Invalid ext counts";
@@ -80,6 +83,27 @@ ScanResult parse(const std::vector<uint8_t>& blob, size_t offset) override {
     if (block_size < 1024 || block_size > (1ULL << 20)) {
         r.info = "Unreasonable block size";
         Logger::error(r.info);
+        return r;
+    }
+
+    // Structural sanity. The 8-byte match at +0x38 has only ~12 plausible
+    // realisations, so by-chance hits in arbitrary binaries are common —
+    // tighten with cross-field checks the chance bytes won't satisfy.
+    //   * first_data_block is 0 (block_size>=2048) or 1 (block_size==1024)
+    //   * blocks/inodes per group must be nonzero and addressable by one
+    //     bitmap block (block_size*8 entries).
+    //   * inodes can't outnumber blocks*(block_size/128) — each inode is
+    //     at least 128 bytes on disk.
+    uint64_t bits_per_block = block_size * 8;
+    uint64_t max_inodes = (uint64_t)blocks * (block_size / 128);
+    bool plausible =
+        (first_data_block == 0 || first_data_block == 1) &&
+        blocks_per_group != 0 && blocks_per_group <= bits_per_block &&
+        inodes_per_group != 0 && inodes_per_group <= bits_per_block &&
+        (uint64_t)inodes <= max_inodes;
+    if (!plausible) {
+        r.info = "Implausible ext superblock fields (likely false positive)";
+        Logger::debug(r.info);
         return r;
     }
 

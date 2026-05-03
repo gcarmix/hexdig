@@ -67,6 +67,22 @@ public:
         size_t computedLen = std::min<size_t>(declaredSize, remaining);
         bool plausibleDecl = declaredSize >= 0x40 && declaredSize <= remaining;
 
+        // The magic is only 4 bytes and matches by accident in random binaries
+        // (e.g. Mach-O). When declaredSize is implausible, abort before the
+        // structural walk: it would otherwise dereference offsets read from
+        // garbage data and read past the end of the buffer.
+        if (!plausibleDecl) {
+            r.info = "Implausible CramFS declared size (likely false positive)";
+            r.length = computedLen;
+            r.isValid = false;
+            Logger::debug(r.info);
+            return r;
+        }
+
+        // Upper bound for any further reads. Even with a plausible
+        // declaredSize, never index past the end of the input buffer.
+        const size_t imageEnd = std::min<size_t>(offset + (size_t)declaredSize, blob.size());
+
         // Parse root inode (expected at offset + 0x40)
         size_t rootInoOff = offset + 0x40;
         if (rootInoOff + 12 > blob.size()) {
@@ -80,13 +96,14 @@ public:
 
         // Validate root inode
         bool rootIsDir = isDir(root.mode);
-        bool rootNameOK = (root.namelen == 0 || (rootInoOff + 12 + root.namelen) <= (offset + declaredSize));
+        bool rootNameOK = (root.namelen == 0 || (rootInoOff + 12 + root.namelen) <= imageEnd);
         bool rootOffsetOK = (root.offset < declaredSize);
         bool rootSizeOK = (root.size <= declaredSize);
 
-        // Read root name if present (typically empty)
+        // Read root name if present (typically empty). Bounded by imageEnd so
+        // we never read past the buffer even if rootNameOK is false.
         std::string rootName;
-        if (root.namelen) {
+        if (root.namelen && rootNameOK) {
             for (size_t i = 0; i < root.namelen; ++i) {
                 rootName.push_back((char)blob[rootInoOff + 12 + i]);
             }
@@ -97,19 +114,19 @@ public:
         // Each entry: [inode (12 bytes)] + [name (namelen bytes)]
         size_t sampleCount = 0;
         size_t dirCursor = offset + root.offset;
-        bool dirRegionOK = dirCursor >= offset && dirCursor < (offset + declaredSize);
+        bool dirRegionOK = dirCursor >= offset && dirCursor < imageEnd;
 
         bool sampleOK = true;
         if (rootIsDir && dirRegionOK) {
             // Walk up to N entries or until bounds issue; this is a heuristic, not a full walk.
             const size_t MAX_SAMPLE = 8;
             while (sampleCount < MAX_SAMPLE) {
-                if (dirCursor + 12 > (offset + declaredSize)) { sampleOK = false; break; }
+                if (dirCursor + 12 > imageEnd) { sampleOK = false; break; }
                 CramfsInode child = parseInode(blob, dirCursor, isLE);
                 dirCursor += 12;
 
                 // Name bounds
-                if (dirCursor + child.namelen > (offset + declaredSize)) { sampleOK = false; break; }
+                if (dirCursor + child.namelen > imageEnd) { sampleOK = false; break; }
 
                 // Advance over name
                 dirCursor += child.namelen;
@@ -145,7 +162,7 @@ public:
              << ", offset=" << root.offset << ", size=" << root.size;
 
         // Final validity
-        bool valid = plausibleDecl && rootIsDir && rootNameOK && rootOffsetOK && rootSizeOK && (!root.namelen || rootInoOff + 12 + root.namelen <= offset + declaredSize);
+        bool valid = plausibleDecl && rootIsDir && rootNameOK && rootOffsetOK && rootSizeOK && (!root.namelen || rootInoOff + 12 + root.namelen <= imageEnd);
         //if (rootIsDir && dirRegionOK) valid = valid && sampleOK;
 
         r.info = info.str();

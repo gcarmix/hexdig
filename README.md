@@ -232,6 +232,7 @@ Run `hexdig --help` for all available options.
 - JPG
 - Linux
 - LZMA
+- MachO
 - MBR
 - PDF
 - PE

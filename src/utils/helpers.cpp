@@ -152,9 +152,11 @@ std::string find_7z() {
 #ifdef _WIN32
     const std::initializer_list<const char*> bundled = {"7zr.exe", "7za.exe", "7z.exe"};
     const char* fallback = "7z";
+    const char sep = ';';
 #else
     const std::initializer_list<const char*> bundled = {"7zz", "7z"};
     const char* fallback = "7zz";
+    const char sep = ':';
 #endif
 
     auto dir = executable_dir();
@@ -170,7 +172,33 @@ std::string find_7z() {
         }
     }
 
-    // Nothing bundled — rely on the OS PATH lookup performed by std::system().
+    // Nothing bundled. Walk PATH and pick the first installed binary.
+    // Distros vary: Debian/Ubuntu package the binary as `7z`; the upstream
+    // 7-Zip release uses `7zz`. Returning the first that exists matches what
+    // is_7z_available() already accepts.
+    if (const char* pathEnv = std::getenv("PATH")) {
+        std::string path(pathEnv);
+        size_t start = 0;
+        while (start <= path.size()) {
+            size_t end = path.find(sep, start);
+            std::string d = path.substr(start, end - start);
+            if (!d.empty()) {
+                for (auto name : bundled) {
+                    std::error_code ec;
+                    if (std::filesystem::exists(std::filesystem::path(d) / name, ec)) {
+                        cached = name;
+                        return cached;
+                    }
+                }
+            }
+            if (end == std::string::npos) break;
+            start = end + 1;
+        }
+    }
+
+    // Nothing on PATH either — keep the original last-ditch behaviour
+    // (let std::system() try, so the operator gets a clear "command not
+    // found" code 127 instead of a silent no-op).
     cached = fallback;
     return cached;
 }

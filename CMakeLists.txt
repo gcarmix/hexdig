@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
-project(hexdig VERSION 1.0.0)
+project(hexdig VERSION 1.0.1)
 
 
 set(CMAKE_CXX_STANDARD 17)
@@ -67,7 +67,7 @@ add_executable(hexdig src/main.cpp)
 target_compile_options(hexdig PRIVATE -O3)
 target_compile_definitions(hexdig PRIVATE PROJECT_VERSION="${PROJECT_VERSION}")
 target_link_libraries(hexdig PRIVATE hexdig_lib)
-target_link_options(hexdig PRIVATE -s)
+target_link_options(hexdig PRIVATE $<$<CONFIG:Release>:-s>)
 
 install(TARGETS hexdig
     RUNTIME DESTINATION bin
