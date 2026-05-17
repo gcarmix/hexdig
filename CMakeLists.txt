@@ -106,6 +106,14 @@ install(TARGETS hexdig
     RUNTIME DESTINATION bin
 )
 
+# Install the manpage on Unix-like systems. The same file is consumed by
+# debian/hexdig.manpages when building the hexdig .deb, and is automatically
+# picked up by the parent hexwalk install via the umbrella CMake project.
+if (UNIX AND NOT APPLE)
+    install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/man/hexdig.1"
+        DESTINATION share/man/man1)
+endif()
+
 # Tests only when hexdig is the top-level project — keeps HexWalk's ctest set clean.
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     enable_testing()
