@@ -1,3 +1,23 @@
+hexdig (1.0.1-1) unstable; urgency=medium
+
+  * New upstream release.
+    - Add Mach-O parser (thin 32/64-bit, BE/LE) to identify Apple
+      executables and shield embedded parsers from false-positive matches
+      inside Mach-O binaries.
+    - Fix segfaults and unbounded reads in the cramfs, dtb, tar, uimage
+      and cpio parsers/extractors when file-controlled length or offset
+      fields exceed the buffer.
+    - Rewrite SquashFS parser to read v4 superblock fields at the correct
+      offsets (block_size, s_major, bytes_used).
+    - Tighten EXT4 superblock validation (first_data_block, per-group
+      counts, inode/block ratio) to reject false positives in random
+      binaries.
+    - Locate 7-Zip on PATH using the per-platform candidate list so
+      Debian's /usr/bin/7z is found even when the upstream `7zz` name is
+      absent.
+
+ -- Carmix <carmixdev@gmail.com>  Mon, 04 May 2026 09:21:49 +0200
+
 hexdig (1.0.0-1) unstable; urgency=medium
 
   * Initial release.
