@@ -60,6 +60,65 @@ def write_ar_member(name: str, content: bytes) -> bytes:
     return header.encode("ascii") + data
 
 
+def build_rpm(path: Path, name: str = "test-rpm-1.0-1"):
+    # Minimal RPM: 96-byte lead + signature header + main header. The headers
+    # carry zero index entries, which is enough for the parser (it validates the
+    # lead magic and the header-structure magic that follows the lead).
+    lead = bytearray(96)
+    lead[0:4] = bytes([0xED, 0xAB, 0xEE, 0xDB])  # magic
+    lead[4] = 3                                   # major version
+    lead[5] = 0                                   # minor version
+    struct.pack_into(">H", lead, 0x06, 0)         # type: binary
+    struct.pack_into(">H", lead, 0x08, 1)         # archnum
+    enc = name.encode("ascii")[:65]
+    lead[0x0A:0x0A + len(enc)] = enc              # name (NUL-padded)
+    struct.pack_into(">H", lead, 0x4C, 1)         # osnum
+    struct.pack_into(">H", lead, 0x4E, 5)         # signature type
+
+    def header():  # rpm header structure with no entries
+        return bytes([0x8E, 0xAD, 0xE8, 0x01]) + b"\x00" * 4 + struct.pack(">II", 0, 0)
+
+    payload = b"\x1f\x8b\x08\x00payload"          # stand-in compressed cpio
+    path.write_bytes(bytes(lead) + header() + header() + payload)
+
+
+def build_apfs(path: Path, block_size: int = 4096, block_count: int = 8):
+    # Minimal APFS container superblock (nx_superblock_t). The 32-byte obj_phys_t
+    # header is followed by the 'NXSB' magic at 0x20; all fields little-endian.
+    blk = bytearray(block_size)
+    struct.pack_into("<8sQQII", blk, 0, b"\x00" * 8, 1, 4, 0x80000001, 0)  # obj_phys_t
+    struct.pack_into("<I", blk, 0x20, 0x4253584E)   # nx_magic 'NXSB'
+    struct.pack_into("<I", blk, 0x24, block_size)   # nx_block_size
+    struct.pack_into("<Q", blk, 0x28, block_count)  # nx_block_count
+    blk[0x48:0x58] = bytes(range(16))               # nx_uuid
+    # Pad out to the full advertised container size.
+    path.write_bytes(bytes(blk) + b"\x00" * (block_size * block_count - block_size))
+
+
+def build_lzo(path: Path, payload: bytes):
+    # Minimal lzop (.lzo) container with a single STORED block (src_len ==
+    # dst_len), so no LZO compressor is needed to produce a valid file. All
+    # multi-byte fields are big-endian; flags=0 means no per-block checksums.
+    blob = bytes([0x89, 0x4c, 0x5a, 0x4f, 0x00, 0x0d, 0x0a, 0x1a, 0x0a])
+    blob += struct.pack(">H", 0x1040)  # version (>= 0x0940)
+    blob += struct.pack(">H", 0x2090)  # lib version
+    blob += struct.pack(">H", 0x0940)  # version needed to extract
+    blob += struct.pack(">B", 1)       # method (LZO1X-1)
+    blob += struct.pack(">B", 5)       # level
+    blob += struct.pack(">I", 0)       # flags
+    blob += struct.pack(">I", 0)       # mode
+    blob += struct.pack(">I", 0)       # mtime low
+    blob += struct.pack(">I", 0)       # mtime high
+    blob += struct.pack(">B", 0)       # name length (no name)
+    blob += struct.pack(">I", 0)       # header checksum (not validated)
+    # one stored block
+    blob += struct.pack(">I", len(payload))  # uncompressed length
+    blob += struct.pack(">I", len(payload))  # compressed length (== stored)
+    blob += payload
+    blob += struct.pack(">I", 0)       # end-of-stream marker
+    path.write_bytes(blob)
+
+
 def build_deb(path: Path):
     blob = b"!<arch>\n"
     blob += write_ar_member("debian-binary", b"2.0\n")
@@ -370,6 +429,18 @@ class RealFormatTests(unittest.TestCase):
         lzma_path.write_bytes(lzma.compress(b"hello-lzma\n", format=lzma.FORMAT_ALONE))
         self._scan_expect_type(lzma_path, "LZMA")
 
+        lzo_path = self.fixtures / "sample.lzo"
+        build_lzo(lzo_path, b"hello-lzo\n")
+        self._scan_expect_type(lzo_path, "LZO")
+
+        apfs_path = self.fixtures / "sample.apfs"
+        build_apfs(apfs_path)
+        self._scan_expect_type(apfs_path, "APFS")
+
+        rpm_path = self.fixtures / "sample.rpm"
+        build_rpm(rpm_path)
+        self._scan_expect_type(rpm_path, "RPM")
+
         cpio_path = self.fixtures / "sample.cpio"
         build_cpio(cpio_path)
         self._scan_expect_type(cpio_path, "CPIO")
@@ -512,6 +583,11 @@ class RealFormatTests(unittest.TestCase):
             f.write(b"hello-gzip\n")
         out_dir = self._extract_case(gz_path, "GZIP", ["decompressed.bin"])
         self.assertEqual((out_dir / "decompressed.bin").read_bytes(), b"hello-gzip\n")
+
+        lzo_path = self.fixtures / "extract.lzo"
+        build_lzo(lzo_path, b"hello-lzo\n")
+        out_dir = self._extract_case(lzo_path, "LZO", ["decompressed.bin"])
+        self.assertEqual((out_dir / "decompressed.bin").read_bytes(), b"hello-lzo\n")
 
         uimage_path = self.fixtures / "extract.uimage"
         build_uimage(uimage_path)

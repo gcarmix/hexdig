@@ -53,6 +53,7 @@ public:
         info << "DOS Master Boot Record";
 
         bool foundPartition = false;
+        bool protectiveMbr = false;
         for (int i = 0; i < 4; i++) {
             size_t off = partBase + i * 16;
             uint8_t type = blob[off + 4];
@@ -65,11 +66,17 @@ public:
                 std::string typeName = (it != typeNames.end()) ? it->second : "Unknown";
                 uint64_t imageSize = (uint64_t)sectors * 512ULL;
 
+                if (type == 0xEE) protectiveMbr = true;
+
                 info << ", partition: " << typeName
                      << ", image size: " << imageSize << " bytes";
                 break; // report first valid partition only
             }
         }
+
+        // A protective MBR just shields a GPT disk; let the GPT parser drive the
+        // extraction (from LBA 0) so the disk isn't decompressed twice.
+        if (protectiveMbr) r.extractorType = "";
 
         r.isValid = foundPartition;
         r.info = info.str();
