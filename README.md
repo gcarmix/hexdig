@@ -216,6 +216,7 @@ Run `hexdig --help` for all available options.
 
 - AES
 - Android Sparse
+- APFS
 - ARJ
 - BMP
 - BZIP2
@@ -228,10 +229,12 @@ Run `hexdig --help` for all available options.
 - ELF
 - FAT
 - GIF
+- GPT
 - GZIP
 - JPG
 - Linux
 - LZMA
+- LZO (lzop)
 - MachO
 - MBR
 - PDF
@@ -239,6 +242,7 @@ Run `hexdig --help` for all available options.
 - PNG
 - RAR
 - ROMFS
+- RPM
 - 7Z
 - SquashFS
 - TAR
